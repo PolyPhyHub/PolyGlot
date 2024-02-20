@@ -109,12 +109,12 @@
 	const urlParams = new URLSearchParams(window.location.search);
 	let ifMusic = urlParams.get('music') == 'true';
 
-	let dataDirectory = "data/global_1/";
+	let dataDirectory = "data/plankton/";
 	let firstFile = true; // We want this to be false after loading the first file so that the points dont shift around
 
 	// ** Set of variables from deposit_reader.py, important for coordiante conversion **
 	let SCALING_FACTOR_SLIME = 10;
-	let GRID_MIN = [-115.75681, -101.80056, -126.10199]; // grid center - size / 2 given in metadata
+	let GRID_MIN = [0,0,0] // [-115.75681, -101.80056, -126.10199]; // grid center - size / 2 given in metadata
 
 	let group
 	let container, stat;
@@ -149,8 +149,10 @@
 	var searchZoomList = ["0: also_ADV", "918: right_NOUN"];
 	var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/plankton/"];
 
+	var GLOBAL_SCHEMA = ["lat", "lon", "t", "s", "H1", "H2", "H3"]
+
 	//var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/Lautonomy_Data/"];
-	let traceDataDirectory = "data/global_1/"; // CONTROLS WHICH DATASET TO LOAD WITH!!
+	let traceDataDirectory = "data/plankton/"; // DUPE: CONTROLS WHICH DATASET TO LOAD WITH!! but so does dataDirectory
 	var dataTraceController;
 
 	// change initial dataset if music == true, modified for quick access to music embedding
@@ -288,14 +290,13 @@
 		camera.near = 5;
 		// CHANGED NEAR PARAM TO MAKE RAY CASTING SMOOTHER DURING ZOOM
 
-
-
 		// REQUIRED - For camera control
 		controls = new OrbitControls( camera, container );
 		//controls.minDistance = 0;
 
 		// REQUIRED - group to add everything in
 		group = new THREE.Group();
+		group.add(buildAxes( 1000 ))
 		scene.add(group);
 
 		// REQUIRED - add meshes, add both point and edge (Should be reading data)
@@ -344,11 +345,6 @@
 			'annotationSearch': ""
 		};
 
-		if (dataDirectory === "data/plankton/") {
-			const axesHelper = new THREE.AxesHelper( 500 );
-			scene.add( axesHelper );
-		}
-
 		gui.add(GUIparam, 'selectData', datasetList).name('Dataset').onChange(function(){
 			if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
 				visualFolder.remove(subClassDropDown);
@@ -361,11 +357,15 @@
 			camera.position.z = 800;
 			camera.near = 5;
 			group = new THREE.Group();
+			group.add(buildAxes( 1000 ))
 			scene.add(group);
-			if (dataDirectory === "data/plankton/") {
+
+			// FIXME: duplicated setup code
+			/* if (dataDirectory === "data/plankton/") {
 				const axesHelper = new THREE.AxesHelper( 500 );
 				scene.add( axesHelper );
-			}
+			} */
+			
 			visualFolder.remove(colorMapDropDown);
 			colorModeList = ["slime connect", "part of speech"];
 			if (colorMapBool && (dataDirectory === "data/plankton/")) {
@@ -512,6 +512,31 @@
 		document.addEventListener('click', onDocumentClick);
 		document.addEventListener('keydown', onKeyDownEvent);
 		document.addEventListener('keyup', onKeyUpEvent);
+	}
+
+	
+	// TODO: this helper function is probably not in the right place
+	function buildAxis(st, nd, col) {
+		const geometry = new THREE.BufferGeometry();
+		const material = new THREE.LineBasicMaterial( { color: col} );
+
+		const positions = [];
+		positions.push(st.x, st.y, st.z);
+		positions.push(nd.x, nd.y, nd.z);
+
+		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+		return new THREE.Line(geometry, material)
+	}
+	function buildAxes( length ) {
+		let axes = new THREE.Group();
+		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000],
+		    yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, length, 0 ), 0x00FF00],
+		    zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, length ), 0x0000FF]
+
+		axes.add(buildAxis(...xPos))
+		axes.add(buildAxis(...yPos))
+		axes.add(buildAxis(...zPos))
+		return axes
 	}
 
 	function onWindowResize() {
@@ -666,16 +691,13 @@
 			raycasterMultiTokens.setFromCamera( mouse, camera );
 			var intersectsMultiTokens = raycasterMultiTokens.intersectObject(pointCloud);
 		}
-
 		if (annotationOn !== -1) {
-
 			raycasterAnnotations.setFromCamera( mouse, camera );
 			var annotationIntersects = raycasterAnnotations.intersectObject(pointCloud);
 		}
 
 		raycaster.setFromCamera( mouse, camera );
 		var intersects = raycaster.intersectObject(pointCloud);
-
 
 		// if there is any point being intersected at the moment
 		if (intersects.length > 0){
@@ -699,13 +721,13 @@
 			}
 
 			if ( tobeINTERSECTED && INTERSECTED != intersects[0].index ) {
+				// SWAP two RGB colors
 				particleColor[INTERSECTED * 3] = originalRGB[0];
 				particleColor[INTERSECTED * 3 + 1] = originalRGB[1];
 				particleColor[INTERSECTED * 3 + 2] = originalRGB[2];
 				particleOpacity[INTERSECTED] = originalRGB[3];
 
 				INTERSECTED = tobeINTERSECTED;
-
 				originalRGB = [particleColor[INTERSECTED * 3],
 					particleColor[INTERSECTED * 3 + 1],
 					particleColor[INTERSECTED * 3 + 2],
@@ -716,15 +738,13 @@
 				particleColor[INTERSECTED * 3 + 2] = 1;
 				particleOpacity[INTERSECTED] = 1;
 
-				var particle_text = particleData[INTERSECTED].name;
-				var particle_pos = new THREE.Vector3(particlePositions[INTERSECTED*3],
-						particlePositions[INTERSECTED*3 + 1],
-						particlePositions[INTERSECTED*3 + 2]);
+				// var particle_text = particleData[INTERSECTED].name;
 
 				// A hacky solution to display multiple tokens
-				var particle_mesg = "";
+				let particle_mesg = "";
 
-				if (displayMultiToken){
+				// path for multiple selection from a single skewer
+				/* if (displayMultiToken){
 					for (var i = 0; i < intersectsMultiTokens.length; i++) {
 						if (shiftPressed && availableIds[particleData[intersectsMultiTokens[i].index].id]
 								|| !shiftPressed){
@@ -737,11 +757,22 @@
 						}
 					}
 				}
-				else {
-					particle_mesg = intersects[i].index.toString() + ": " + particle_text;
-				}
+				else { */
+				// single token payload
+				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
+
+				let w = intersects[i], // {distance: Float, distanceToRay: Float, face: {}, index: Int, object: ThreeJS, point: {x,y,z} }
+					u = particleData[w.index] // {id: Int, name: String, ...}
+				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
+
+				particle_mesg = GLOBAL_SCHEMA
+								.map((k) => ['id'].includes(k) ? '' : `${k}: ${u[k]}`).filter(s => s).join('\n')
+
 				expand = false;
-				showTooltip(particle_pos, particle_mesg);
+				showTooltip(new THREE.Vector3(particlePositions[i*3],
+						particlePositions[i*3 + 1],
+						particlePositions[i*3 + 2]),
+						particle_mesg);
 
 
 				// Check if annotation mode is on and add points to respective annotation group
@@ -893,6 +924,7 @@
 			// Clear the scene
 			scene.remove(scene.children[0]);
 			group = new THREE.Group();
+			group.add(buildAxes( 1000 ))
 			scene.add(group);
 			// ===================
 
@@ -1494,7 +1526,7 @@
 
 			availableIds[lnspl[0]/1] = lnspl.slice(1).join(' ');
 		}
-
+		// console.log(availableIds)
 	}
 
 	// LOADING FULL DATA
@@ -1503,8 +1535,10 @@
 		particleData = [];
 
 		// ACHTUNG: THIS IS LIMITING THE NUMBER OF NODES
-		if (maxParticleCount > 1000000)
+		if (maxParticleCount > 1000000) {
+			console.log("WARN: More than 1,000,000 points in dataset. Truncating output.")
 			maxParticleCount = 1000000;
+		}
 
 		const pMaterial = new THREE.ShaderMaterial( {
 			uniforms: {
@@ -1536,8 +1570,8 @@
 
 		for ( let i = 0; i < maxParticleCount; i ++ ) {
 			var wordContent = lines[i * 2];
-
 			var wordGraphAttribute = lines[i * 2 + 1];
+
 			const splitOn = new RegExp(/\s+/);
 			wordGraphAttribute = wordGraphAttribute.split(splitOn);
 			// changed the split to be on ANY amount of whitespace (ie., tabs are fine too)
@@ -1564,7 +1598,8 @@
 				topNodeWeight = nodeWeight;
 			}
 
-			if (id == originAttr){
+			// Disabled this code path for translating PolyPhy outputs to the origin based on 'originAttr', which was making bad choices
+			/* if (id == originAttr){
 				origini = id;
 
 				if (firstFile){
@@ -1573,11 +1608,11 @@
 					originX = particlePositions[ id * 3 ] * SCALING_FACTOR_SLIME - GRID_MIN[0];
 					originY = particlePositions[ id * 3 + 1 ] * SCALING_FACTOR_SLIME - GRID_MIN[1];
 					originZ = particlePositions[ id * 3 + 2 ] * SCALING_FACTOR_SLIME - GRID_MIN[2];
+
+					console.log(originX, originY, originZ)
 				}
-			}
+			} */
 		}
-
-
 		particles.setAttribute( 'position', new THREE.BufferAttribute( particlePositions, 3 ).setUsage( THREE.DynamicDrawUsage ) );
 		particles.setAttribute( 'color', new THREE.BufferAttribute( particleColor, 3 ).setUsage( THREE.DynamicDrawUsage ) );
 		particles.setAttribute( 'alpha', new THREE.BufferAttribute( particleOpacity, 1 ).setUsage( THREE.DynamicDrawUsage ) );
@@ -1591,6 +1626,30 @@
 		allPoints = particleData.map(x => x.id + ": " + x.name);
 
 		const sizeAttribute = pointCloud.geometry.getAttribute("size");
+		
+		const schema = GLOBAL_SCHEMA
+		// FIXME: column names should be loaded from a schema file, since they're broken out to separate files
+
+		console.log(particleData)
+		schema.forEach((col) => {
+			const columnPath = 'data/plankton/color_map/' + col +".csv" // BRITTLE
+			getFileObject(columnPath, function (colorMapData) {
+				let reader = new FileReader();
+				reader.onload = (e) => {
+					const file = e.target.result;
+					let lines = file.split(/\r\n|\n/);
+
+					lines.forEach((u) => {
+						if (u) { // swallow blank lines
+							let lineData = u.split(',')
+							const id = +lineData[0];
+							particleData[id][col] = +lineData[1]; // VERIFY: ingest one numeric value
+						}
+					})
+				}
+				reader.readAsText(colorMapData);
+			});
+		})
 	}
 
 	// LOADING ANCHOR POINT
@@ -1655,9 +1714,9 @@
 			particleColorMap[id] = colorWeight;
 			if (colorWeight > topColorWeight){
 				topColorWeight = colorWeight;
-				console.log("top color weight:", topColorWeight);
 			}
 		}
+		console.log("top color weight:", topColorWeight);
 
 		updatePtsColor();
 	}
