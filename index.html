@@ -181,6 +181,13 @@
 	let nodeWeightThreshold = 0; // Use this to filter out low weight nodes
 	let connWeightThreshold = 0; // Use this to filter out low slime mold connection
 	let connWeightHighDimThreshold = 0;
+	let planktonLatitudeThreshold = 0;
+	let planktonLongitudeThreshold = 0;
+	let planktonTThreshold = 0;
+	let planktonSThreshold = 0;
+	let planktonH1Threshold = 0;
+	let planktonH2Threshold = 0;
+	let planktonH3Threshold = 0;
 
 	let availableIds = {}; // List of IDs available, each entry is in format [id, info]
 
@@ -265,6 +272,13 @@
 	var colorMapBool = true;
 	var colorMapDropDown;
 	var subClassDropDown;
+	var planktonLatFilter = [];
+	var planktonLonFilter = [];
+	var planktonTFilter = [];
+	var planktonSFilter = [];
+	var planktonH1Filter = [];
+	var planktonH2Filter = [];
+	var planktonH3Filter = [];
 
 	// actual calls
 	init();
@@ -333,7 +347,15 @@
 			'showAnnotations': true,
 			'grayScale': false,
 			'year': 2020.7,
-			'timeSize': 1
+			'timeSize': 1,
+			'pointSize': 0.75,
+			'plankton_lat': 0,
+			'plankton_lon': 0,
+			'plankton_t': 0,
+			'plankton_s': 0,
+			'plankton_h1': 0,
+			'plankton_h2': 0,
+			'plankton_h3': 0
 		};
 
 		newAnnotationParam = {
@@ -354,17 +376,21 @@
 			traceDataDirectory = dataDirectory;
 
 			scene.remove(scene.children[0]);
+			initializeData();
+			automaticLoadData(dataDirectory);
 			camera.position.z = 800;
 			camera.near = 5;
+
 			group = new THREE.Group();
 			group.add(buildAxes( 1000 ))
 			scene.add(group);
 
 			// FIXME: duplicated setup code
-			/* if (dataDirectory === "data/plankton/") {
+			if (dataDirectory === "data/plankton/") {
 				const axesHelper = new THREE.AxesHelper( 500 );
 				scene.add( axesHelper );
-			} */
+			}
+
 			
 			visualFolder.remove(colorMapDropDown);
 			colorModeList = ["slime connect", "part of speech"];
@@ -439,15 +465,64 @@
 		// 	updatePtsColor();
 		// })
 
-		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter LD').onChange(function(){
-			connWeightThreshold = GUIparam.particleConnectionWeight;
+		gui.add(GUIparam, 'pointSize', 0.001, 1).name('Point Size').onChange(function(size){
+			for (let k = 0; k < maxParticleCount; k++)
+				particleSize[k] = size;
 			updatePtsColor();
 		});
 
-		gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
-			connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
-			updatePtsColor();
-		});
+		if (dataDirectory === "data/global_1/" || dataDirectory === "data/global_2/" || (dataDirectory === "data/music_demo/")) {
+			gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter Similarity').onChange(function () {
+				connWeightThreshold = GUIparam.particleConnectionWeight;
+				updatePtsColor();
+			});
+		}
+
+		if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
+			gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function () {
+				connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
+				updatePtsColor();
+			});
+		}
+
+		if (dataDirectory === "data/plankton/") {
+			gui.add(GUIparam, 'plankton_lat', 0, 234044/2).name('Filter Latitude').onChange(function () {
+				planktonLatitudeThreshold = GUIparam.plankton_lat;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_lon', 0, 234044/2).name('Filter Longitude').onChange(function () {
+				planktonLongitudeThreshold = GUIparam.plankton_lon;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_t', 0, 234044/2).name('Filter T').onChange(function () {
+				planktonTThreshold = GUIparam.plankton_t;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_s', 0, 234044/2).name('Filter S').onChange(function () {
+				planktonSThreshold = GUIparam.plankton_s;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_h1', 0, 234044/2).name('Filter H1').onChange(function () {
+				planktonH1Threshold = GUIparam.plankton_h1;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_h2', 0, 234044/2).name('Filter H2').onChange(function () {
+				planktonH2Threshold = GUIparam.plankton_h2;
+				updatePtsColor();
+			});
+
+			gui.add(GUIparam, 'plankton_h3', 0, 234044/2).name('Filter H3').onChange(function () {
+				planktonH3Threshold = GUIparam.plankton_h3;
+				updatePtsColor();
+			});
+		}
+
+
 
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
@@ -866,6 +941,33 @@
 
 	}
 
+	function showTooltipOG(objectPosition, text) {
+		var divElement = $("#tooltip");
+
+		divElement.css({
+			display: "block",
+			opacity: 0.0
+		});
+
+		var canvasHalfWidth = renderer.domElement.offsetWidth / 2;
+		var canvasHalfHeight = renderer.domElement.offsetHeight / 2;
+
+		var tooltipPosition = objectPosition.clone().project(camera);
+		tooltipPosition.x = (tooltipPosition.x * canvasHalfWidth) + canvasHalfWidth;
+		tooltipPosition.y = -(tooltipPosition.y * canvasHalfHeight) + canvasHalfHeight;
+
+		var tooltipWidth = divElement[0].offsetWidth;
+		var tooltipHeight = divElement[0].offsetHeight;
+
+		divElement.css({
+			left: `${tooltipPosition.x + tooltipWidth / 16 - tooltipWidth/2}px`,
+			top: `${tooltipPosition.y + tooltipHeight / 16 + 30}px`
+		});
+
+		divElement.text(text);
+		divElement.css({opacity: 0.7});
+	}
+
 	function showTooltip(objectPosition, text) {
 		var divElement = $("#tooltip");
 
@@ -1034,6 +1136,29 @@
 							}
 							docReq.open("GET", dataDirectory + "top_documents.tsv");
 							docReq.send();
+						}
+
+						if (dataDirectory === "data/plankton/") {
+							const column_files = {lat:planktonLatFilter, lon:planktonLonFilter, t:planktonTFilter,
+												s:planktonSFilter, H1:planktonH1Filter, H2: planktonH2Filter, H3:planktonH3Filter}
+
+							for (const property in column_files) {
+								var abbrev = property;
+								var temp_file_name = "static_sort/" + abbrev + ".csv";
+
+								var docReq = new XMLHttpRequest();
+								docReq.onload = function () {
+									var docsResponse = this.responseText.split(/\n/);
+
+									for (i = 0; i < docsResponse.length; i++) {
+										var temp_row = docsResponse[i].split(',');
+										column_files[property][i] = temp_row[0];
+									}
+
+								}
+								docReq.open("GET", dataDirectory + temp_file_name);
+								docReq.send();
+							}
 						}
 
 						getFileObject(data_dir + originAttr.toString() +".txt", function (anchorData) {
@@ -1907,6 +2032,127 @@
 				particleColor[annotationFivePoints[i].split(':')[0] * 3 + 2] = annotationFiveColor.rgb()[2] / 255;
 			}
 		}
+
+		if (dataDirectory === "data/plankton/") {
+			if (planktonTThreshold !== 0){
+				for (var cutoff = 0; cutoff < planktonTThreshold; cutoff++) {
+					var pos_point = planktonTFilter[cutoff - 1];
+					var neg_point = planktonTFilter[-cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+			}
+			if (planktonSThreshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonSThreshold; cutoff++) {
+					var pos_point = planktonSFilter[cutoff - 1];
+					var neg_point = planktonSFilter[planktonSThreshold.length - cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+
+			}
+			if (planktonLatitudeThreshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonLatitudeThreshold; cutoff++) {
+					var pos_point = planktonLatFilter[cutoff - 1];
+					var neg_point = planktonLatFilter[planktonLatFilter.length - cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+
+			}
+			if (planktonLongitudeThreshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonLongitudeThreshold; cutoff++) {
+					var pos_point = planktonLonFilter[cutoff - 1];
+					var neg_point = planktonLonFilter[planktonLonFilter.length - cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+
+			}
+			if (planktonH1Threshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonH1Threshold; cutoff++) {
+					var pos_point = planktonH1Filter[cutoff - 1];
+					var neg_point = planktonH1Filter[planktonH1Filter.length - cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+			}
+			if (planktonH2Threshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonH2Threshold; cutoff++) {
+					var pos_point = planktonH2Filter[cutoff - 1];
+					var neg_point = planktonH2Filter[planktonH2Filter.length - cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+
+			}
+			if (planktonH3Threshold !== 0) {
+				for (var cutoff = 0; cutoff < planktonH3Threshold; cutoff++) {
+					var pos_point = planktonH3Filter[cutoff - 1];
+					var neg_point = planktonH3Filter[planktonH3Filter.length -cutoff];
+
+					particleColor[ pos_point * 3 ] = 0.0;
+					particleColor[ pos_point * 3 + 1 ] = 0.0;
+					particleColor[ pos_point * 3 + 2] = 0.0;
+					particleOpacity[pos_point] = 0.0;
+
+					particleColor[ neg_point * 3 ] = 0.0;
+					particleColor[ neg_point * 3 + 1 ] = 0.0;
+					particleColor[ neg_point * 3 + 2] = 0.0;
+					particleOpacity[neg_point] = 0.0;
+				}
+
+			}
+		}
+
 
 	}
 
