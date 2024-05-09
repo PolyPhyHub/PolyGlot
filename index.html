@@ -578,7 +578,7 @@
 			min.style.marginTop = "5px";
 			min.style.height = "15px";
 			min.style.border = "none";
-			min.style.width = ((min.value.length+2) * 6) + 'px';
+			min.style.width = ((min.value.length+3) * 6) + 'px';
 			min.addEventListener("keyup", ({key}) => {
 				if (key === "Enter") {
 					let input = min.value;
@@ -613,7 +613,7 @@
 			max.style.marginTop = "5px";
 			max.style.height = "15px";
 			max.style.border = "none";
-			max.style.width = ((max.value.length+2) * 6) + 'px';
+			max.style.width = ((max.value.length+3) * 6) + 'px';
 			max.addEventListener("keyup", ({key}) => {
 				if (key === "Enter") {
 					let input = max.value;
@@ -1153,6 +1153,7 @@
 		if (highDimMetricBool) {
 			loadHighDimAnchor([]);
 		}
+		updatePtsColor();
 	}
 
 	// This is the main data load function, calls three other load functions
@@ -1889,7 +1890,7 @@
 		allPoints = particleData.map(x => x.id + ": " + x.name);
 
 		const sizeAttribute = pointCloud.geometry.getAttribute("size");
-		
+
 		const schema = GLOBAL_SCHEMA
 		// FIXME: column names should be loaded from a schema file, since they're broken out to separate files
 
@@ -2040,6 +2041,7 @@
 
 	// Update the color value for all points
 	function updatePtsColor() {
+		console.log("in updatePtsColor");
 		for (let i = 0; i < maxParticleCount; i++) {
 			if ((particleWeight[i] < nodeWeightThreshold ||
 							particleConnectionWeight[i] < connWeightThreshold ||
@@ -2105,19 +2107,19 @@
 								break;
 							}
 					}
-					if (resetBool) {
-						colorCache[i * 3] = particleColor[i * 3];
-						colorCache[i * 3 + 1] = particleColor[i * 3 + 1];
-						colorCache[i * 3 + 2] = particleColor[i * 3 + 2];
-						opacityCache[i] = particleOpacity[i];
-						resetBool = false;
-					}
 
 					particleColor[ i * 3 ] = finalColor[0] / 255;
 					particleColor[ i * 3 + 1 ] = finalColor[1] / 255;
 					particleColor[ i * 3 + 2 ] = finalColor[2] / 255;
 
 					particleOpacity[i] = (1 - opacityTuning) + opacityTuning * particleConnectionWeight[i] / topEdgeWeight;
+
+					if (resetBool && i === maxParticleCount-1) {
+						console.log("Filling in colorCache");
+						colorCache = particleColor;
+						opacityCache = particleOpacity;
+						resetBool = false;
+					}
 
 					if (mypos == filterPOS ||
 							(filterPOS == 'NOUN+VERB+ADJ+ADV' && (
@@ -2187,6 +2189,7 @@
 				particleColor[annotationFivePoints[i].split(':')[0] * 3 + 2] = annotationFiveColor.rgb()[2] / 255;
 			}
 		}
+
 	}
 
 	function planktonFiltering(feature, center) {
@@ -2233,6 +2236,9 @@
 
 	function submitRange(featureName) {
 		//resetColors(); // assign all points to inital color map
+		updatePtsColor();
+		console.log("colorCache", colorCache);
+		console.log("particleColor", particleColor);
 		if (dataDirectory === "data/plankton/") {
 			// TO DO: finish filtering function + update controller?
 			const values = planktonValues[featureName];
