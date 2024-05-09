@@ -73,7 +73,7 @@
 		
 			void main () {
 			  gColor = color;
-			  gl_Position = vec4(position * .9, 1.);
+			  gl_Position = vec4(position, 1.);
 			}
 			</script>
 		<script type="x-shader/x-fragment" id="fragmentshader-parcoords">
@@ -106,7 +106,6 @@
 	import CustomController from './dat_gui_custom/src/dat/controllers/CustomController.js';
 
 	import { OrbitControls } from './jsm/controls/OrbitControls.js';
-	import { elementStack } from './parallelCoords.js';
 	import { makeScene, renderParallelCoords } from "./threeHelper.js";
 
 	// #######################################################
