@@ -71,14 +71,10 @@
 <div id="tooltip"></div>
 
 <div id="container"></div>
-<script type="text/javascript" src="./dat_gui_custom/build/dat.gui.js"></script>
-<script src="https://raw.githack.com/anhr/customController/master/build/customcontrollers.js"></script>
 
 <script type="module">
 	import * as THREE from './build/three.module.js';
-	//import { GUI } from './jsm/libs/dat.gui.module.js';
-	import CustomController from './dat_gui_custom/src/dat/controllers/CustomController.js';
-
+	import { GUI } from './jsm/libs/dat.gui.module.js';
 	import { OrbitControls } from './jsm/controls/OrbitControls.js';
 
 	// #######################################################
@@ -113,12 +109,12 @@
 	const urlParams = new URLSearchParams(window.location.search);
 	let ifMusic = urlParams.get('music') == 'true';
 
-	let dataDirectory = "data/plankton/";
+	let dataDirectory = "data/global_1/";
 	let firstFile = true; // We want this to be false after loading the first file so that the points dont shift around
 
 	// ** Set of variables from deposit_reader.py, important for coordiante conversion **
 	let SCALING_FACTOR_SLIME = 10;
-	let GRID_MIN = [0,0,0] // [-115.75681, -101.80056, -126.10199]; // grid center - size / 2 given in metadata
+	let GRID_MIN = [-115.75681, -101.80056, -126.10199]; // grid center - size / 2 given in metadata
 
 	let group
 	let container, stat;
@@ -153,10 +149,8 @@
 	var searchZoomList = ["0: also_ADV", "918: right_NOUN"];
 	var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/plankton/"];
 
-	var GLOBAL_SCHEMA = ["lat", "lon", "t", "s", "H1", "H2", "H3"]
-
 	//var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/Lautonomy_Data/"];
-	let traceDataDirectory = "data/plankton/"; // DUPE: CONTROLS WHICH DATASET TO LOAD WITH!! but so does dataDirectory
+	let traceDataDirectory = "data/global_1/"; // CONTROLS WHICH DATASET TO LOAD WITH!!
 	var dataTraceController;
 
 	// change initial dataset if music == true, modified for quick access to music embedding
@@ -185,13 +179,6 @@
 	let nodeWeightThreshold = 0; // Use this to filter out low weight nodes
 	let connWeightThreshold = 0; // Use this to filter out low slime mold connection
 	let connWeightHighDimThreshold = 0;
-	let planktonLatitudeThreshold = 0;
-	let planktonLongitudeThreshold = 0;
-	let planktonTThreshold = 0;
-	let planktonSThreshold = 0;
-	let planktonH1Threshold = 0;
-	let planktonH2Threshold = 0;
-	let planktonH3Threshold = 0;
 
 	let availableIds = {}; // List of IDs available, each entry is in format [id, info]
 
@@ -276,15 +263,6 @@
 	var colorMapBool = true;
 	var colorMapDropDown;
 	var subClassDropDown;
-	var planktonValues = {lat:[], lon:[], t:[], s:[], H1:[], H2:[], H3:[]};
-	var planktonIndexes = {lat:[], lon:[], t:[],
-		s:[], H1:[], H2: [], H3:[]};
-	var planktonFilters = {lat:[], lon:[], t:[],
-		s:[], H1:[], H2: [], H3:[]};
-	var colorCache = [];
-	var opacityCache = [];
-	var resetBool = true;
-
 
 	// actual calls
 	init();
@@ -292,7 +270,7 @@
 
 	function init(){
 		container = document.getElementById( 'container' );
-		resetBool = true;
+
 		raycaster = new THREE.Raycaster();
 		raycaster.params.Points.threshold = 0.7;
 		raycasterMultiTokens = new THREE.Raycaster();
@@ -310,13 +288,14 @@
 		camera.near = 5;
 		// CHANGED NEAR PARAM TO MAKE RAY CASTING SMOOTHER DURING ZOOM
 
+
+
 		// REQUIRED - For camera control
 		controls = new OrbitControls( camera, container );
 		//controls.minDistance = 0;
 
 		// REQUIRED - group to add everything in
 		group = new THREE.Group();
-		group.add(buildAxes( 1000 ))
 		scene.add(group);
 
 		// REQUIRED - add meshes, add both point and edge (Should be reading data)
@@ -332,7 +311,7 @@
 
 		// REQUIRED - GUI Setup
 
-		gui = new dat.gui.GUI();
+		gui = new GUI();
 
 		GUIparam = {
 			'selectData': dataDirectory,
@@ -354,14 +333,7 @@
 			'grayScale': false,
 			'year': 2020.7,
 			'timeSize': 1,
-			'pointSize': 0.75,
-			'plankton_lat': 0,
-			'plankton_lon': 0,
-			'plankton_t': 0,
-			'plankton_s': 0,
-			'plankton_h1': 0,
-			'plankton_h2': 0,
-			'plankton_h3': 0
+			'pointSize': 1
 		};
 
 		newAnnotationParam = {
@@ -372,6 +344,11 @@
 			'annotationBrushSize': 1,
 			'annotationSearch': ""
 		};
+
+		if (dataDirectory === "data/plankton/") {
+			const axesHelper = new THREE.AxesHelper( 500 );
+			scene.add( axesHelper );
+		}
 
 		gui.add(GUIparam, 'selectData', datasetList).name('Dataset').onChange(function(){
 			if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
@@ -386,25 +363,18 @@
 			automaticLoadData(dataDirectory);
 			camera.position.z = 800;
 			camera.near = 5;
-
 			group = new THREE.Group();
-			group.add(buildAxes( 1000 ))
 			scene.add(group);
-
-			// FIXME: duplicated setup code
 			if (dataDirectory === "data/plankton/") {
 				const axesHelper = new THREE.AxesHelper( 500 );
 				scene.add( axesHelper );
 			}
-
-			
 			visualFolder.remove(colorMapDropDown);
 			colorModeList = ["slime connect", "part of speech"];
 			if (colorMapBool && (dataDirectory === "data/plankton/")) {
 				colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 					colorMode = GUIparam.colorMode;
-					resetBool = true;
 					if (colorMode !== ("slime connect" || "part of speech")) {
 						getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 							let reader = new FileReader();
@@ -438,8 +408,7 @@
 				})
 			}
 
-			initializeData();
-			automaticLoadData(dataDirectory);
+
 
 		})
 
@@ -472,65 +441,21 @@
 		// 	updatePtsColor();
 		// })
 
-		gui.add(GUIparam, 'pointSize', 0.001, 1).name('Point Size').onChange(function(size){
+		visualFolder.add(GUIparam, 'pointSize', 0.001, 1).name('Point Size').onChange(function(size){
 			for (let k = 0; k < maxParticleCount; k++)
 				particleSize[k] = size;
 			updatePtsColor();
 		});
 
-		if (dataDirectory === "data/global_1/" || dataDirectory === "data/global_2/" || (dataDirectory === "data/music_demo/")) {
-			gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter Similarity').onChange(function () {
-				connWeightThreshold = GUIparam.particleConnectionWeight;
-				updatePtsColor();
-			});
-		}
+		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter LD').onChange(function(){
+			connWeightThreshold = GUIparam.particleConnectionWeight;
+			updatePtsColor();
+		});
 
-		if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
-			gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function () {
-				connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
-				updatePtsColor();
-			});
-		}
-
-		// if (dataDirectory === "data/plankton/") {
-		// 	gui.add(GUIparam, 'plankton_lat', 0, 234044/2).name('Filter Latitude').onChange(function () {
-		// 		planktonLatitudeThreshold = GUIparam.plankton_lat;
-		// 		console.log(margin);
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_lon', 0, 234044/2).name('Filter Longitude').onChange(function () {
-		// 		planktonLongitudeThreshold = GUIparam.plankton_lon;
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_t', 0, 234044/2).name('Filter T').onChange(function () {
-		// 		planktonTThreshold = GUIparam.plankton_t;
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_s', 0, 234044/2).name('Filter S').onChange(function () {
-		// 		planktonSThreshold = GUIparam.plankton_s;
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_h1', 0, 234044/2).name('Filter H1').onChange(function () {
-		// 		planktonH1Threshold = GUIparam.plankton_h1;
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_h2', 0, 234044/2).name('Filter H2').onChange(function () {
-		// 		planktonH2Threshold = GUIparam.plankton_h2;
-		// 		updatePtsColor();
-		// 	});
-		//
-		// 	gui.add(GUIparam, 'plankton_h3', 0, 234044/2).name('Filter H3').onChange(function () {
-		// 		planktonH3Threshold = GUIparam.plankton_h3;
-		// 		updatePtsColor();
-		// 	});
-		// }
-
-
+		gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
+			connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
+			updatePtsColor();
+		});
 
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
@@ -560,144 +485,10 @@
 			updatePtsColor();
 		});
 
-		function addButton(featureName) {
-			let minNum;
-			let maxNum;
-			let minValid = false;
-			let maxValid = false;
-			const regex = /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$/;
-			var container = document.createElement( 'div' );
-			container.innerText = featureName;
-			container.style.display = "flex";
-			container.style.flexDirection = "row";
-			var submit = document.createElement( 'span' );
-			submit.innerHTML = "&#x2715";
-			submit.style.cursor = 'pointer';
-
-			var min = document.createElement("input");
-			min.type = "text";
-			min.style.borderRadius = "3px";
-			min.style.marginTop = "5px";
-			min.style.height = "15px";
-			min.style.border = "none";
-			min.style.width = ((min.value.length+3) * 6) + 'px';
-			min.addEventListener("keyup", ({key}) => {
-				if (key === "Enter") {
-					let input = min.value;
-					if( !regex.test(input) ) {
-						min.style.backgroundColor = "#ff968f";
-						alert("Please input a valid number!");
-					} else {
-						minNum = parseFloat(input);
-						minValid = true;
-						min.style.backgroundColor = "#acffab";
-						if (maxValid) {
-							if (parseFloat(minNum) < parseFloat(maxNum)) {
-								// TO DO: filter!
-								planktonFilters[featureName] = [minNum, maxNum];
-								submit.innerHTML = "&#x2713;";
-								submitRange(featureName);
-							} else {
-								max.style.backgroundColor = "#ff968f";
-								alert("Your min value must be less than the max!");
-							}
-						}
-					}
-				}
-			})
-			container.appendChild(min);
-			min.insertAdjacentHTML("beforebegin", "&nbsp;")
-			min.insertAdjacentHTML('afterend', "&nbsp;")
-
-			var max = document.createElement("input");
-			max.type = "text";
-			max.style.borderRadius = "3px";
-			max.style.marginTop = "5px";
-			max.style.height = "15px";
-			max.style.border = "none";
-			max.style.width = ((max.value.length+3) * 6) + 'px';
-			max.addEventListener("keyup", ({key}) => {
-				if (key === "Enter") {
-					let input = max.value;
-					if( !regex.test(input) ) {
-						max.style.backgroundColor = "#ff968f";
-						alert("Please input a valid number!");
-					} else {
-						maxNum = parseFloat(input);
-						maxValid = true;
-						max.style.backgroundColor = "#acffab";
-						if (minValid) {
-							if (parseFloat(minNum) < parseFloat(maxNum)) {
-								// TO DO: filter!
-								planktonFilters[featureName] = [minNum, maxNum];
-								submit.innerHTML = "&#x2713;";
-								submitRange(featureName);
-							} else {
-								max.style.backgroundColor = "#ff968f";
-								alert("Your min value must be less than the max!");
-							}
-						}
-					}
-				}
-			})
-			container.appendChild(max);
-			max.insertAdjacentHTML('afterend', "&nbsp;")
-			container.appendChild(submit);
-
-			container.style.margin = '0px 3';
-			return container;
-		}
-
-		const latitudeObj = {
-			center: 0,
-			displayName: 'LatitudeSpan',
-			add: function(){ console.log("clicked") },
-			abbrev: 'lat',
-			property: function ( customController ) {
-				var buttons = {};
-				buttons.range = addButton("lat");
-				return buttons;
-			}
-		}
-
-		const longitudeObj = {
-			center: 0,
-			add:function(){ console.log("clicked") },
-			displayName: 'LongitudeSpan',
-			abbrev: 'lon',
-			property: function ( customController ) {
-				var buttons = {};
-				buttons.zoomLabel = addButton("lon");
-				return buttons;
-			}
-		}
-
-		class TextRangeController extends CustomController {
-			constructor(object, propertyName) {
-				super(object, propertyName);
-				// object (includes 'property'), property, min, max, stepsize
-				// crucially, we store extra params in the 'object'
-				if ( this.property === undefined ) {
-					console.error( 'init() returns ' + this.property );
-				}
-				console.log(this.domElement);
-			}
-		}
-
-		const latController = new TextRangeController(latitudeObj, 'center');
-		const lonController = new TextRangeController(longitudeObj, 'center');
-
-
-		gui.add(latController);
-
-		gui.add(lonController);
-
-
 		if (colorMapBool && dataDirectory === "data/plankton/") {
 			colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 			colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 				colorMode = GUIparam.colorMode;
-				resetBool = true;
 				if (colorMode !== ("slime connect" || "part of speech")) {
 					getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 						let reader = new FileReader();
@@ -729,31 +520,6 @@
 		document.addEventListener('click', onDocumentClick);
 		document.addEventListener('keydown', onKeyDownEvent);
 		document.addEventListener('keyup', onKeyUpEvent);
-	}
-
-	
-	// TODO: this helper function is probably not in the right place
-	function buildAxis(st, nd, col) {
-		const geometry = new THREE.BufferGeometry();
-		const material = new THREE.LineBasicMaterial( { color: col} );
-
-		const positions = [];
-		positions.push(st.x, st.y, st.z);
-		positions.push(nd.x, nd.y, nd.z);
-
-		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-		return new THREE.Line(geometry, material)
-	}
-	function buildAxes( length ) {
-		let axes = new THREE.Group();
-		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000],
-		    yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, length, 0 ), 0x00FF00],
-		    zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, length ), 0x0000FF]
-
-		axes.add(buildAxis(...xPos))
-		axes.add(buildAxis(...yPos))
-		axes.add(buildAxis(...zPos))
-		return axes
 	}
 
 	function onWindowResize() {
@@ -908,13 +674,16 @@
 			raycasterMultiTokens.setFromCamera( mouse, camera );
 			var intersectsMultiTokens = raycasterMultiTokens.intersectObject(pointCloud);
 		}
+
 		if (annotationOn !== -1) {
+
 			raycasterAnnotations.setFromCamera( mouse, camera );
 			var annotationIntersects = raycasterAnnotations.intersectObject(pointCloud);
 		}
 
 		raycaster.setFromCamera( mouse, camera );
 		var intersects = raycaster.intersectObject(pointCloud);
+
 
 		// if there is any point being intersected at the moment
 		if (intersects.length > 0){
@@ -938,13 +707,13 @@
 			}
 
 			if ( tobeINTERSECTED && INTERSECTED != intersects[0].index ) {
-				// SWAP two RGB colors
 				particleColor[INTERSECTED * 3] = originalRGB[0];
 				particleColor[INTERSECTED * 3 + 1] = originalRGB[1];
 				particleColor[INTERSECTED * 3 + 2] = originalRGB[2];
 				particleOpacity[INTERSECTED] = originalRGB[3];
 
 				INTERSECTED = tobeINTERSECTED;
+
 				originalRGB = [particleColor[INTERSECTED * 3],
 					particleColor[INTERSECTED * 3 + 1],
 					particleColor[INTERSECTED * 3 + 2],
@@ -955,13 +724,15 @@
 				particleColor[INTERSECTED * 3 + 2] = 1;
 				particleOpacity[INTERSECTED] = 1;
 
-				// var particle_text = particleData[INTERSECTED].name;
+				var particle_text = particleData[INTERSECTED].name;
+				var particle_pos = new THREE.Vector3(particlePositions[INTERSECTED*3],
+						particlePositions[INTERSECTED*3 + 1],
+						particlePositions[INTERSECTED*3 + 2]);
 
 				// A hacky solution to display multiple tokens
-				let particle_mesg = "";
+				var particle_mesg = "";
 
-				// path for multiple selection from a single skewer
-				/* if (displayMultiToken){
+				if (displayMultiToken){
 					for (var i = 0; i < intersectsMultiTokens.length; i++) {
 						if (shiftPressed && availableIds[particleData[intersectsMultiTokens[i].index].id]
 								|| !shiftPressed){
@@ -974,22 +745,11 @@
 						}
 					}
 				}
-				else { */
-				// single token payload
-				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
-
-				let w = intersects[i], // {distance: Float, distanceToRay: Float, face: {}, index: Int, object: ThreeJS, point: {x,y,z} }
-					u = particleData[w.index] // {id: Int, name: String, ...}
-				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
-
-				particle_mesg = GLOBAL_SCHEMA
-								.map((k) => ['id'].includes(k) ? '' : `${k}: ${u[k]}`).filter(s => s).join('\n')
-
+				else {
+					particle_mesg = intersects[i].index.toString() + ": " + particle_text;
+				}
 				expand = false;
-				showTooltip(new THREE.Vector3(particlePositions[i*3],
-						particlePositions[i*3 + 1],
-						particlePositions[i*3 + 2]),
-						particle_mesg);
+				showTooltip(particle_pos, particle_mesg);
 
 
 				// Check if annotation mode is on and add points to respective annotation group
@@ -1083,33 +843,6 @@
 
 	}
 
-	function showTooltipOG(objectPosition, text) {
-		var divElement = $("#tooltip");
-
-		divElement.css({
-			display: "block",
-			opacity: 0.0
-		});
-
-		var canvasHalfWidth = renderer.domElement.offsetWidth / 2;
-		var canvasHalfHeight = renderer.domElement.offsetHeight / 2;
-
-		var tooltipPosition = objectPosition.clone().project(camera);
-		tooltipPosition.x = (tooltipPosition.x * canvasHalfWidth) + canvasHalfWidth;
-		tooltipPosition.y = -(tooltipPosition.y * canvasHalfHeight) + canvasHalfHeight;
-
-		var tooltipWidth = divElement[0].offsetWidth;
-		var tooltipHeight = divElement[0].offsetHeight;
-
-		divElement.css({
-			left: `${tooltipPosition.x + tooltipWidth / 16 - tooltipWidth/2}px`,
-			top: `${tooltipPosition.y + tooltipHeight / 16 + 30}px`
-		});
-
-		divElement.text(text);
-		divElement.css({opacity: 0.7});
-	}
-
 	function showTooltip(objectPosition, text) {
 		var divElement = $("#tooltip");
 
@@ -1156,7 +889,6 @@
 		if (highDimMetricBool) {
 			loadHighDimAnchor([]);
 		}
-		updatePtsColor();
 	}
 
 	// This is the main data load function, calls three other load functions
@@ -1169,7 +901,6 @@
 			// Clear the scene
 			scene.remove(scene.children[0]);
 			group = new THREE.Group();
-			group.add(buildAxes( 1000 ))
 			scene.add(group);
 			// ===================
 
@@ -1279,28 +1010,6 @@
 							}
 							docReq.open("GET", dataDirectory + "top_documents.tsv");
 							docReq.send();
-						}
-
-						if (dataDirectory === "data/plankton/") {
-
-							for (const property in planktonIndexes) {
-								var abbrev = property;
-								var temp_file_name = "static_sort/" + abbrev + ".csv";
-
-								var docReq = new XMLHttpRequest();
-								docReq.onload = function () {
-									var docsResponse = this.responseText.split(/\n/);
-
-									for (i = 0; i < docsResponse.length; i++) {
-										var temp_row = docsResponse[i].split(',');
-										planktonIndexes[property][i] = temp_row[0];
-										planktonValues[property][i] = temp_row[1];
-									}
-
-								}
-								docReq.open("GET", dataDirectory + temp_file_name);
-								docReq.send();
-							}
 						}
 
 						getFileObject(data_dir + originAttr.toString() +".txt", function (anchorData) {
@@ -1793,7 +1502,7 @@
 
 			availableIds[lnspl[0]/1] = lnspl.slice(1).join(' ');
 		}
-		// console.log(availableIds)
+
 	}
 
 	// LOADING FULL DATA
@@ -1802,10 +1511,8 @@
 		particleData = [];
 
 		// ACHTUNG: THIS IS LIMITING THE NUMBER OF NODES
-		if (maxParticleCount > 1000000) {
-			console.log("WARN: More than 1,000,000 points in dataset. Truncating output.")
+		if (maxParticleCount > 1000000)
 			maxParticleCount = 1000000;
-		}
 
 		const pMaterial = new THREE.ShaderMaterial( {
 			uniforms: {
@@ -1837,8 +1544,8 @@
 
 		for ( let i = 0; i < maxParticleCount; i ++ ) {
 			var wordContent = lines[i * 2];
-			var wordGraphAttribute = lines[i * 2 + 1];
 
+			var wordGraphAttribute = lines[i * 2 + 1];
 			const splitOn = new RegExp(/\s+/);
 			wordGraphAttribute = wordGraphAttribute.split(splitOn);
 			// changed the split to be on ANY amount of whitespace (ie., tabs are fine too)
@@ -1865,8 +1572,7 @@
 				topNodeWeight = nodeWeight;
 			}
 
-			// Disabled this code path for translating PolyPhy outputs to the origin based on 'originAttr', which was making bad choices
-			/* if (id == originAttr){
+			if (id == originAttr){
 				origini = id;
 
 				if (firstFile){
@@ -1875,11 +1581,11 @@
 					originX = particlePositions[ id * 3 ] * SCALING_FACTOR_SLIME - GRID_MIN[0];
 					originY = particlePositions[ id * 3 + 1 ] * SCALING_FACTOR_SLIME - GRID_MIN[1];
 					originZ = particlePositions[ id * 3 + 2 ] * SCALING_FACTOR_SLIME - GRID_MIN[2];
-
-					console.log(originX, originY, originZ)
 				}
-			} */
+			}
 		}
+
+
 		particles.setAttribute( 'position', new THREE.BufferAttribute( particlePositions, 3 ).setUsage( THREE.DynamicDrawUsage ) );
 		particles.setAttribute( 'color', new THREE.BufferAttribute( particleColor, 3 ).setUsage( THREE.DynamicDrawUsage ) );
 		particles.setAttribute( 'alpha', new THREE.BufferAttribute( particleOpacity, 1 ).setUsage( THREE.DynamicDrawUsage ) );
@@ -1893,30 +1599,6 @@
 		allPoints = particleData.map(x => x.id + ": " + x.name);
 
 		const sizeAttribute = pointCloud.geometry.getAttribute("size");
-
-		const schema = GLOBAL_SCHEMA
-		// FIXME: column names should be loaded from a schema file, since they're broken out to separate files
-
-		console.log(particleData)
-		schema.forEach((col) => {
-			const columnPath = 'data/plankton/color_map/' + col +".csv" // BRITTLE
-			getFileObject(columnPath, function (colorMapData) {
-				let reader = new FileReader();
-				reader.onload = (e) => {
-					const file = e.target.result;
-					let lines = file.split(/\r\n|\n/);
-
-					lines.forEach((u) => {
-						if (u) { // swallow blank lines
-							let lineData = u.split(',')
-							const id = +lineData[0];
-							particleData[id][col] = +lineData[1]; // VERIFY: ingest one numeric value
-						}
-					})
-				}
-				reader.readAsText(colorMapData);
-			});
-		})
 	}
 
 	// LOADING ANCHOR POINT
@@ -1981,9 +1663,9 @@
 			particleColorMap[id] = colorWeight;
 			if (colorWeight > topColorWeight){
 				topColorWeight = colorWeight;
+				console.log("top color weight:", topColorWeight);
 			}
 		}
-		console.log("top color weight:", topColorWeight);
 
 		updatePtsColor();
 	}
@@ -2033,18 +1715,8 @@
 		}
 	}
 
-	function resetColors() {
-		for (let i = 0; i < maxParticleCount; i++) {
-			particleColor[i * 3] = colorCache[i * 3];
-			particleColor[i * 3 + 1] = colorCache[i * 3 + 1];
-			particleColor[i * 3 + 2] = colorCache[i * 3 + 2];
-			particleOpacity[i] = opacityCache[i];
-		}
-	}
-
 	// Update the color value for all points
 	function updatePtsColor() {
-		console.log("in updatePtsColor");
 		for (let i = 0; i < maxParticleCount; i++) {
 			if ((particleWeight[i] < nodeWeightThreshold ||
 							particleConnectionWeight[i] < connWeightThreshold ||
@@ -2117,13 +1789,6 @@
 
 					particleOpacity[i] = (1 - opacityTuning) + opacityTuning * particleConnectionWeight[i] / topEdgeWeight;
 
-					if (resetBool && i === maxParticleCount-1) {
-						console.log("Filling in colorCache");
-						colorCache = particleColor;
-						opacityCache = particleOpacity;
-						resetBool = false;
-					}
-
 					if (mypos == filterPOS ||
 							(filterPOS == 'NOUN+VERB+ADJ+ADV' && (
 									mypos == 'NOUN' ||
@@ -2155,7 +1820,6 @@
 					}
 				}
 			}
-
 		}
 
 		if (zoomedTerm) {
@@ -2193,158 +1857,6 @@
 			}
 		}
 
-		if (dataDirectory === "data/plankton/") {
-			if (planktonTThreshold !== 0){
-				for (var cutoff = 0; cutoff < planktonTThreshold; cutoff++) {
-					var pos_point = planktonTFilter[cutoff - 1];
-					var neg_point = planktonTFilter[-cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-			}
-			if (planktonSThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonSThreshold; cutoff++) {
-					var pos_point = planktonSFilter[cutoff - 1];
-					var neg_point = planktonSFilter[planktonSThreshold.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonLatitudeThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonLatitudeThreshold; cutoff++) {
-					var pos_point = planktonLatFilter[cutoff - 1];
-					var neg_point = planktonLatFilter[planktonLatFilter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonLongitudeThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonLongitudeThreshold; cutoff++) {
-					var pos_point = planktonLonFilter[cutoff - 1];
-					var neg_point = planktonLonFilter[planktonLonFilter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonH1Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH1Threshold; cutoff++) {
-					var pos_point = planktonH1Filter[cutoff - 1];
-					var neg_point = planktonH1Filter[planktonH1Filter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-			}
-			if (planktonH2Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH2Threshold; cutoff++) {
-					var pos_point = planktonH2Filter[cutoff - 1];
-					var neg_point = planktonH2Filter[planktonH2Filter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonH3Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH3Threshold; cutoff++) {
-					var pos_point = planktonH3Filter[cutoff - 1];
-					var neg_point = planktonH3Filter[planktonH3Filter.length -cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-		}
-
-
-	}
-
-	function planktonFiltering(feature, center) {
-		// @param: feature is the abbreviated name of the feature to filter by
-		// @param: center is the index of the central point for filtering
-		if (dataDirectory === "data/plankton/") {
-			updatePtsColor();
-			const margin = planktonMargins[feature];
-			const length = planktonIndexes[feature].length;
-			const centerPoint = planktonIndexes[feature][center];
-			let bottom = center - margin;
-			let top = center + margin;
-			if (bottom < 0) {
-				bottom = 0;
-			} else if (top > 234044) {
-				top = 234044;
-			}
-
-			for (let i = 0; i < length; i++) {
-				if (bottom < i && i < top) {
-
-				} else {
-					let tempIndex = planktonIndexes[feature][i]
-					particleColor[ tempIndex * 3 ] = 0.0;
-					particleColor[ tempIndex * 3 + 1 ] = 0.0;
-					particleColor[ tempIndex * 3 + 2] = 0.0;
-					particleOpacity[tempIndex] = 0.0;
-				}
-			}
-
-		}
 	}
 
 	// Update dropdown
@@ -2356,33 +1868,6 @@
 		}
 
 		if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
-	}
-
-	function submitRange(featureName) {
-		//resetColors(); // assign all points to inital color map
-		updatePtsColor();
-		console.log("colorCache", colorCache);
-		console.log("particleColor", particleColor);
-		if (dataDirectory === "data/plankton/") {
-			// TO DO: finish filtering function + update controller?
-			const values = planktonValues[featureName];
-			const idx = planktonIndexes[featureName];
-			const filter = planktonFilters[featureName];
-
-			for (let i = 0; i < values.length; i++) {
-				if (filter[0] <= values[i] && values[i] <= filter[1]) {
-					particleColor[i * 3] = colorCache[i * 3];
-					particleColor[i * 3 + 1] = colorCache[i * 3 + 1];
-					particleColor[i * 3 + 2] = colorCache[i * 3 + 2];
-					particleOpacity[i] = opacityCache[i];
-				} else {
-					particleColor[ idx[i] * 3 ] = 0.0;
-					particleColor[ idx[i] * 3 + 1 ] = 0.0;
-					particleColor[ idx[i] * 3 + 2] = 0.0;
-					particleOpacity[idx[i]] = 0.0;
-				}
-			}
-		}
 	}
 
 </script>
