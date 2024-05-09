@@ -285,7 +285,6 @@
 	var opacityCache = [];
 	var resetBool = true;
 
-
 	// actual calls
 	init();
 	animate();
@@ -531,7 +530,6 @@
 		// }
 
 
-
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
 			updatePtsColor();
@@ -691,7 +689,6 @@
 		gui.add(latController);
 
 		gui.add(lonController);
-
 
 		if (colorMapBool && dataDirectory === "data/plankton/") {
 			colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
@@ -2192,127 +2189,6 @@
 				particleColor[annotationFivePoints[i].split(':')[0] * 3 + 2] = annotationFiveColor.rgb()[2] / 255;
 			}
 		}
-
-		if (dataDirectory === "data/plankton/") {
-			if (planktonTThreshold !== 0){
-				for (var cutoff = 0; cutoff < planktonTThreshold; cutoff++) {
-					var pos_point = planktonTFilter[cutoff - 1];
-					var neg_point = planktonTFilter[-cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-			}
-			if (planktonSThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonSThreshold; cutoff++) {
-					var pos_point = planktonSFilter[cutoff - 1];
-					var neg_point = planktonSFilter[planktonSThreshold.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonLatitudeThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonLatitudeThreshold; cutoff++) {
-					var pos_point = planktonLatFilter[cutoff - 1];
-					var neg_point = planktonLatFilter[planktonLatFilter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonLongitudeThreshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonLongitudeThreshold; cutoff++) {
-					var pos_point = planktonLonFilter[cutoff - 1];
-					var neg_point = planktonLonFilter[planktonLonFilter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonH1Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH1Threshold; cutoff++) {
-					var pos_point = planktonH1Filter[cutoff - 1];
-					var neg_point = planktonH1Filter[planktonH1Filter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-			}
-			if (planktonH2Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH2Threshold; cutoff++) {
-					var pos_point = planktonH2Filter[cutoff - 1];
-					var neg_point = planktonH2Filter[planktonH2Filter.length - cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-			if (planktonH3Threshold !== 0) {
-				for (var cutoff = 0; cutoff < planktonH3Threshold; cutoff++) {
-					var pos_point = planktonH3Filter[cutoff - 1];
-					var neg_point = planktonH3Filter[planktonH3Filter.length -cutoff];
-
-					particleColor[ pos_point * 3 ] = 0.0;
-					particleColor[ pos_point * 3 + 1 ] = 0.0;
-					particleColor[ pos_point * 3 + 2] = 0.0;
-					particleOpacity[pos_point] = 0.0;
-
-					particleColor[ neg_point * 3 ] = 0.0;
-					particleColor[ neg_point * 3 + 1 ] = 0.0;
-					particleColor[ neg_point * 3 + 2] = 0.0;
-					particleOpacity[neg_point] = 0.0;
-				}
-
-			}
-		}
-
 
 	}
 
