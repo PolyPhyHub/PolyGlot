@@ -67,32 +67,36 @@
                 gl_FragColor = vec4(gcolor -  distance / 40.0, galpha);
             }
         </script>
+	<script type="x-shader/x-fragment" id="vertexshader-parcoords">
+		varying vec3 gColor;
 
-		<script type="x-shader/x-fragment" id="vertexshader-parcoords">
-			varying vec3 gColor;
-		
-			void main () {
-			  gColor = color;
-			  gl_Position = vec4(position * .9, 1.);
-			}
-			</script>
-		<script type="x-shader/x-fragment" id="fragmentshader-parcoords">
-			varying vec2 myUV;
-			varying vec3 gColor;
-		
-			void main () {
-			  gl_FragColor = vec4(gColor, .01);
-			}
-			</script>
+		void main () {
+		  gColor = color;
+		  gl_Position = vec4(position * .9, 1.);
+		}
+		</script>
+	<script type="x-shader/x-fragment" id="fragmentshader-parcoords">
+		varying vec2 myUV;
+		varying vec3 gColor;
+
+		void main () {
+		  gl_FragColor = vec4(gColor, .01);
+		}
+	</script>
 </head>
 <body>
 
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
 	<div id="container" style="width: 700px; height: 700px;"></div>
-	<div>
-		<div id="reserved-datgui" style="width: 400px; height: 300px;"></div>
-		<div id="parallel" style="width: 400px; height: 400px; float: right;"></div>
+	<div style="z-index: 90;">
+		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute">
+			<div id="reserved-datgui"></div>
+		</div>
 	</div>
+	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
+		 width="50%" height="100%" fill="red" stroke="blue"
+		 style="left: 705px; position:fixed; z-index: 99999;">
+	</svg>
 </div>
 <canvas id="canvas" style="position: fixed; left: 0; top: 0;" ></canvas>
 <div id="tooltip"></div>
@@ -331,6 +335,7 @@
 		})
 		console.log(layers)
 		console.log(layers.value) */
+
 
 		// interaction
 		raycaster = new THREE.Raycaster();
@@ -583,6 +588,7 @@
 		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 		return new THREE.Line(geometry, material)
 	}
+
 	function buildAxes( length ) {
 		let axes = new THREE.Group();
 		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000],
@@ -1689,6 +1695,7 @@
 			.setUsage( THREE.DynamicDrawUsage ) );
 		makeStringAttributes(particleData) // TODO: encapsulate particle cloud initialization, too
 
+		console.log("strings in used in line segments", strings);
 		skein = new THREE.LineSegments( strings, lMaterial )
 		skein.frustumCulled = false;
 		selectionWidgetInfo.scene.add( skein ); // same renderer, different scene and camera
@@ -1754,6 +1761,8 @@
 				.flat(),
 			keys.slice(-1)[0]
 		];
+
+		console.log("keystrip", keysStrip);
 	
 		// populate the buffers directly
 		const n = keysStrip.length
@@ -1768,8 +1777,8 @@
 				// if (i == 78015) console.log(keysStrip.map((k,j) => i*n + j*3 + 2))
 
 				keysStrip.forEach((k,j) => {
-					stringPositions[i*n*3 + j*3] =  y(k)
-					stringPositions[i*n*3 + j*3 + 1] = x.get(k)(u[k])
+					stringPositions[i*n*3 + j*3] =  x.get(k)(u[k])
+					stringPositions[i*n*3 + j*3 + 1] = y(k)
 					stringPositions[i*n*3 + j*3 + 2] = 0.5
 
 					stringColor[i*n*3 + j*3] = vs[0] / 255.
@@ -1788,6 +1797,8 @@
 			console.log(strings)
 			
 			// strings.center()
+
+			addAxes(document.getElementById("axes"), keysStrip, data);
 		}
 
 		Object.assign(ret, {points: stringPositions.length, values: stringColor.length, colorScale: color, cleanFlag})
@@ -1923,7 +1934,7 @@
 		updatePtsColor();
 	}
 
-	// Adjust so that the origini is at the origin point
+	// Adjust so that the origin is at the origin point
 	function adjustGraphPos() {
 		var scaleFactor = 10;
 
@@ -2113,7 +2124,7 @@
 	}
 
 	// Update dropdown
-	function updateDropdown(target, list){
+	function updateDropdown(target, list, x){
 		var innerHTMLStr = "";
 		for(var i=0; i<list.length; i++){
 			var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
@@ -2121,6 +2132,88 @@
 		}
 
 		if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
+	}
+
+	function addAxes(ret, keys, data) {
+		const svg = d3.select(ret);
+		svg.selectAll("*").remove();
+		const brushHeight = 30;
+		const width = parseInt(svg.style("width"));
+		const height = parseInt(svg.style("height"));
+		const facetHeight = height/7;
+
+		const brush = d3.brushX().extent([
+			[0, -(brushHeight / 2)],
+			[width - 0, brushHeight / 2]
+		]);
+
+		const x = (key) =>
+				d3.scaleLinear(
+						d3.extent(data, (d) => d[key]),
+						[0, width]
+				);
+
+		const selections = new Map();
+
+		// Append the axis for each key.
+		const axes = svg
+				.append("g")
+				.selectAll("g")
+				.data(GLOBAL_SCHEMA)
+				.join("g")
+				.attr("transform", (s, i) => `translate(0,${(i + 0.5) * facetHeight})`) // implicit order from keys: Array
+				.each(function (s) {
+					d3.select(this).call(d3.axisBottom(x(s)));
+				})
+				.call((g) =>
+						g.append("text") // axis labels
+						.attr("x", 30)
+						.attr("y", 0)
+						.attr("text-anchor", "start")
+						.attr("fill", "currentColor")
+						.text((d) => d)
+				)
+				.call((g) =>
+						g.selectAll("text")
+						.clone(true) // underlay for labels
+						.lower()
+						.attr("fill", "none")
+						.attr("stroke-width", 5)
+						.attr("stroke-linejoin", "round")
+						.attr("stroke", "white")
+				);
+
+		axes.call(
+				brush.on("end", function ({ selection }, key) {
+					// update the Map describing our set of filters
+					if (selection === null) selections.delete(key);
+					else {
+						selections.set(key, selection.map(x(key).invert));
+					}
+					// mutable debug = selections;
+
+					// write out the selected rows (straight to their own buffer)
+					const selected = [];
+					data.forEach(function (d, i) {
+						if (
+								Array.from(selections).every(
+										([key, [min, max]]) => d[key] >= min && d[key] <= max
+								)
+						) {
+							selected.push(d); // store this row
+
+							// TODO: update color buffer
+							// const n = 2 * GLOBAL_SCHEMA.length - 2
+							// for (let j = 0; j < n; ++j) {
+							// stringColor[i*n*3 + j*3] = vs[0] / 255.
+							// stringColor[i*n*3 + j*3 + 1] = vs[1] / 255.
+							// stringColor[i*n*3 + j*3 + 2] = vs[2] / 255.
+							// }
+						}
+					});
+				})
+		);
+
 	}
 
 </script>
