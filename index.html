@@ -28,6 +28,15 @@
 			border-radius: 3px;
 			white-space: pre-line;
 		}
+
+		#gui_container{
+			position: absolute;
+			bottom: 0%;
+			left: 0%;
+		}
+		#gui{
+			transform:translate(0, 0);
+		}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/fuzzysort@2.0.4/fuzzysort.min.js"></script>
 	<script src="./chroma.js-master/chroma.js"></script>
@@ -88,14 +97,14 @@
 
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
 	<div id="container" style="width: 700px; height: 700px;"></div>
+	<div id="gui_container" style="z-index: 200;"></div>
 	<div style="z-index: 90;">
 		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute">
-			<div id="reserved-datgui"></div>
 		</div>
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
 		 width="50%" height="100%" fill="red" stroke="blue"
-		 style="left: 705px; position:fixed; z-index: 99999;">
+		 style="left: 705px; position:fixed; z-index: 100;">
 	</svg>
 </div>
 <canvas id="canvas" style="position: fixed; left: 0; top: 0;" ></canvas>
@@ -384,7 +393,9 @@
 
 		// REQUIRED - GUI Setup
 
-		gui = new dat.gui.GUI();
+		gui = new dat.gui.GUI({ autoPlace: false });
+		gui.domElement.id = 'gui';
+		gui_container.appendChild(gui.domElement);
 
 		GUIparam = {
 			'selectData': dataDirectory,
@@ -2356,31 +2367,43 @@
 		axes.call(
 				brush.on("end", function ({ selection }, key) {
 					// update the Map describing our set of filters
-					if (selection === null) selections.delete(key);
+					if (selection === null) {
+						selections.delete(key);
+						updatePtsColor();
+					}
 					else {
 						selections.set(key, selection.map(x(key).invert));
+
+						for (let [key, value] of  selections.entries()) {
+							console.log("KEY", key, typeof key);
+							console.log("value", value, typeof value);
+							planktonFilters[key] = value;
+							submitRange(key)
+						}
 					}
 					// mutable debug = selections;
 
 					// write out the selected rows (straight to their own buffer)
-					const selected = [];
-					data.forEach(function (d, i) {
-						if (
-								Array.from(selections).every(
-										([key, [min, max]]) => d[key] >= min && d[key] <= max
-								)
-						) {
-							selected.push(d); // store this row
-
-							// TODO: update color buffer
-							// const n = 2 * GLOBAL_SCHEMA.length - 2
-							// for (let j = 0; j < n; ++j) {
-							// stringColor[i*n*3 + j*3] = vs[0] / 255.
-							// stringColor[i*n*3 + j*3 + 1] = vs[1] / 255.
-							// stringColor[i*n*3 + j*3 + 2] = vs[2] / 255.
-							// }
-						}
-					});
+					// const selected = [];
+					// data.forEach(function (d, i) {
+					// 	if (
+					// 			Array.from(selections).every(
+					// 					([key, [min, max]]) => d[key] >= min && d[key] <= max
+					// 			)
+					// 	) {
+					// 		selected.push(d); // store this row
+					//
+					// 		console.log("selected", selected);
+					//
+					// 		// TODO: update color buffer
+					// 		// const n = 2 * GLOBAL_SCHEMA.length - 2
+					// 		// for (let j = 0; j < n; ++j) {
+					// 		// stringColor[i*n*3 + j*3] = vs[0] / 255.
+					// 		// stringColor[i*n*3 + j*3 + 1] = vs[1] / 255.
+					// 		// stringColor[i*n*3 + j*3 + 2] = vs[2] / 255.
+					// 		// }
+					// 	}
+					// });
 				})
 		);
 
@@ -2388,7 +2411,7 @@
 
 	function submitRange(featureName) {
 		//resetColors(); // assign all points to inital color map
-		updatePtsColor();
+		//updatePtsColor();
 		console.log("colorCache", colorCache);
 		console.log("particleColor", particleColor);
 		if (dataDirectory === "data/plankton/") {
