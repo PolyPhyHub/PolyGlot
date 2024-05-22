@@ -102,12 +102,15 @@
 <div id="tooltip"></div>
 
 <script src="d3.min.js"></script>
+<script type="text/javascript" src="./dat_gui_custom/build/dat.gui.js"></script>
+<script src="https://raw.githack.com/anhr/customController/master/build/customcontrollers.js"></script>
 <script type="module">
 	import * as THREE from './build/three.module.js';
-	import { GUI } from './jsm/libs/dat.gui.module.js';
+	//import { GUI } from './jsm/libs/dat.gui.module.js';
 	import { OrbitControls } from './jsm/controls/OrbitControls.js';
 	import { elementStack } from './parallelCoords.js';
 	import { makeScene, renderParallelCoords } from "./threeHelper.js";
+	import CustomController from './dat_gui_custom/src/dat/controllers/CustomController.js';
 
 	// #######################################################
 	//      COPY N PASTE FROM THE WEB
@@ -309,6 +312,14 @@
 	var colorMapBool = true;
 	var colorMapDropDown;
 	var subClassDropDown;
+	var planktonValues = {lat:[], lon:[], t:[], s:[], H1:[], H2:[], H3:[]};
+	var planktonIndexes = {lat:[], lon:[], t:[],
+		s:[], H1:[], H2: [], H3:[]};
+	var planktonFilters = {lat:[], lon:[], t:[],
+		s:[], H1:[], H2: [], H3:[]};
+	var colorCache = [];
+	var opacityCache = [];
+	var resetBool = true;
 
 	// actual calls
 	init();
@@ -318,7 +329,7 @@
 		// DOM setup
 		canvas = document.getElementById( 'canvas' );
 		container = document.getElementById( 'container' );
-
+		resetBool = true;
 		renderer = new THREE.WebGLRenderer( {canvas } );
 		renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -373,7 +384,7 @@
 
 		// REQUIRED - GUI Setup
 
-		gui = new GUI();
+		gui = new dat.gui.GUI();
 
 		GUIparam = {
 			'selectData': dataDirectory,
@@ -433,6 +444,7 @@
 				colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 					colorMode = GUIparam.colorMode;
+					resetBool = true;
 					if (colorMode !== ("slime connect" || "part of speech")) {
 						getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 							let reader = new FileReader();
@@ -538,10 +550,138 @@
 			updatePtsColor();
 		});
 
+		function addButton(featureName) {
+			let minNum;
+			let maxNum;
+			let minValid = false;
+			let maxValid = false;
+			const regex = /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$/;
+			var container = document.createElement( 'div' );
+			container.innerText = featureName;
+			container.style.display = "flex";
+			container.style.flexDirection = "row";
+			var submit = document.createElement( 'span' );
+			submit.innerHTML = "&#x2715";
+			submit.style.cursor = 'pointer';
+
+			var min = document.createElement("input");
+			min.type = "text";
+			min.style.borderRadius = "3px";
+			min.style.marginTop = "5px";
+			min.style.height = "15px";
+			min.style.border = "none";
+			min.style.width = ((min.value.length+3) * 6) + 'px';
+			min.addEventListener("keyup", ({key}) => {
+				if (key === "Enter") {
+					let input = min.value;
+					if( !regex.test(input) ) {
+						min.style.backgroundColor = "#ff968f";
+						alert("Please input a valid number!");
+					} else {
+						minNum = parseFloat(input);
+						minValid = true;
+						min.style.backgroundColor = "#acffab";
+						if (maxValid) {
+							if (parseFloat(minNum) < parseFloat(maxNum)) {
+								// TO DO: filter!
+								planktonFilters[featureName] = [minNum, maxNum];
+								submit.innerHTML = "&#x2713;";
+								submitRange(featureName);
+							} else {
+								max.style.backgroundColor = "#ff968f";
+								alert("Your min value must be less than the max!");
+							}
+						}
+					}
+				}
+			})
+			container.appendChild(min);
+			min.insertAdjacentHTML("beforebegin", "&nbsp;")
+			min.insertAdjacentHTML('afterend', "&nbsp;")
+
+			var max = document.createElement("input");
+			max.type = "text";
+			max.style.borderRadius = "3px";
+			max.style.marginTop = "5px";
+			max.style.height = "15px";
+			max.style.border = "none";
+			max.style.width = ((max.value.length+3) * 6) + 'px';
+			max.addEventListener("keyup", ({key}) => {
+				if (key === "Enter") {
+					let input = max.value;
+					if( !regex.test(input) ) {
+						max.style.backgroundColor = "#ff968f";
+						alert("Please input a valid number!");
+					} else {
+						maxNum = parseFloat(input);
+						maxValid = true;
+						max.style.backgroundColor = "#acffab";
+						if (minValid) {
+							if (parseFloat(minNum) < parseFloat(maxNum)) {
+								// TO DO: filter!
+								planktonFilters[featureName] = [minNum, maxNum];
+								submit.innerHTML = "&#x2713;";
+								submitRange(featureName);
+							} else {
+								max.style.backgroundColor = "#ff968f";
+								alert("Your min value must be less than the max!");
+							}
+						}
+					}
+				}
+			})
+			container.appendChild(max);
+			max.insertAdjacentHTML('afterend', "&nbsp;")
+			container.appendChild(submit);
+
+			container.style.margin = '0px 3';
+			return container;
+		}
+		const latitudeObj = {
+			center: 0,
+			displayName: 'LatitudeSpan',
+			add: function(){ console.log("clicked") },
+			abbrev: 'lat',
+			property: function ( customController ) {
+				var buttons = {};
+				buttons.range = addButton("lat");
+				return buttons;
+			}
+		}
+		const longitudeObj = {
+			center: 0,
+			add:function(){ console.log("clicked") },
+			displayName: 'LongitudeSpan',
+			abbrev: 'lon',
+			property: function ( customController ) {
+				var buttons = {};
+				buttons.zoomLabel = addButton("lon");
+				return buttons;
+			}
+		}
+		class TextRangeController extends CustomController {
+			constructor(object, propertyName) {
+				super(object, propertyName);
+				// object (includes 'property'), property, min, max, stepsize
+				// crucially, we store extra params in the 'object'
+				if ( this.property === undefined ) {
+					console.error( 'init() returns ' + this.property );
+				}
+				console.log(this.domElement);
+			}
+		}
+
+		const latController = new TextRangeController(latitudeObj, 'center');
+		const lonController = new TextRangeController(longitudeObj, 'center');
+
+		gui.add(latController);
+		gui.add(lonController);
+
 		if (colorMapBool && dataDirectory === "data/plankton/") {
 			colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 			colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 				colorMode = GUIparam.colorMode;
+				resetBool = true;
 				if (colorMode !== ("slime connect" || "part of speech")) {
 					getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 						let reader = new FileReader();
@@ -993,6 +1133,7 @@
 		if (highDimMetricBool) {
 			loadHighDimAnchor([]);
 		}
+		updatePtsColor();
 	}
 
 	// This is the main data load function, calls three other load functions
@@ -1115,6 +1256,28 @@
 							}
 							docReq.open("GET", dataDirectory + "top_documents.tsv");
 							docReq.send();
+						}
+
+						if (dataDirectory === "data/plankton/") {
+
+							for (const property in planktonIndexes) {
+								var abbrev = property;
+								var temp_file_name = "static_sort/" + abbrev + ".csv";
+
+								var docReq = new XMLHttpRequest();
+								docReq.onload = function () {
+									var docsResponse = this.responseText.split(/\n/);
+
+									for (i = 0; i < docsResponse.length; i++) {
+										var temp_row = docsResponse[i].split(',');
+										planktonIndexes[property][i] = temp_row[0];
+										planktonValues[property][i] = temp_row[1];
+									}
+
+								}
+								docReq.open("GET", dataDirectory + temp_file_name);
+								docReq.send();
+							}
 						}
 
 						getFileObject(data_dir + originAttr.toString() +".txt", function (anchorData) {
@@ -2053,6 +2216,13 @@
 
 					particleOpacity[i] = (1 - opacityTuning) + opacityTuning * particleConnectionWeight[i] / topEdgeWeight;
 
+					if (resetBool && i === maxParticleCount-1) {
+						console.log("Filling in colorCache");
+						colorCache = particleColor;
+						opacityCache = particleOpacity;
+						resetBool = false;
+					}
+
 					if (mypos == filterPOS ||
 							(filterPOS == 'NOUN+VERB+ADJ+ADV' && (
 									mypos == 'NOUN' ||
@@ -2214,6 +2384,33 @@
 				})
 		);
 
+	}
+
+	function submitRange(featureName) {
+		//resetColors(); // assign all points to inital color map
+		updatePtsColor();
+		console.log("colorCache", colorCache);
+		console.log("particleColor", particleColor);
+		if (dataDirectory === "data/plankton/") {
+			// TO DO: finish filtering function + update controller?
+			const values = planktonValues[featureName];
+			const idx = planktonIndexes[featureName];
+			const filter = planktonFilters[featureName];
+
+			for (let i = 0; i < values.length; i++) {
+				if (filter[0] <= values[i] && values[i] <= filter[1]) {
+					particleColor[i * 3] = colorCache[i * 3];
+					particleColor[i * 3 + 1] = colorCache[i * 3 + 1];
+					particleColor[i * 3 + 2] = colorCache[i * 3 + 2];
+					particleOpacity[i] = opacityCache[i];
+				} else {
+					particleColor[ idx[i] * 3 ] = 0.0;
+					particleColor[ idx[i] * 3 + 1 ] = 0.0;
+					particleColor[ idx[i] * 3 + 2] = 0.0;
+					particleOpacity[idx[i]] = 0.0;
+				}
+			}
+		}
 	}
 
 </script>
