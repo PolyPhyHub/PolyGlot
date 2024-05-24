@@ -109,7 +109,7 @@
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
 		 width=50% height="100%"
-		 style="left: 800px; position:fixed; float: right; z-index: 100;">
+		 style="left: 820px; position:fixed; float: right; z-index: 100;">
 	</svg>
 </div>
 <canvas id="canvas" style="position: fixed; left: 0; top: 0; z-index:10" ></canvas>
@@ -916,7 +916,7 @@
 		if (renderBool === true) {
 			renderCount++;
 			renderParallelCoords(renderer, selectionWidgetInfo);
-			if (renderCount === 40) {
+			if (renderCount === 60) {
 				renderBool = false;
 				const imgData = renderer.domElement.toDataURL("image/png").replace("image/png", "image/octet-stream");
 				console.log(imgData);
