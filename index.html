@@ -37,6 +37,11 @@
 		#gui{
 			transform:translate(0, 0);
 		}
+
+		img {
+			float: right;
+			z-index: 0;
+		}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/fuzzysort@2.0.4/fuzzysort.min.js"></script>
 	<script src="./chroma.js-master/chroma.js"></script>
@@ -99,15 +104,15 @@
 	<div id="container" style="width: 700px; height: 700px;"></div>
 	<div id="gui_container" style="z-index: 200;"></div>
 	<div style="z-index: 90;">
-		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute">
+		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: clip">
 		</div>
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
-		 width="50%" height="100%" fill="red" stroke="blue"
-		 style="left: 705px; position:fixed; z-index: 100;">
+		 width=50% height="100%"
+		 style="left: 800px; position:fixed; float: right; z-index: 100;">
 	</svg>
 </div>
-<canvas id="canvas" style="position: fixed; left: 0; top: 0;" ></canvas>
+<canvas id="canvas" style="position: fixed; left: 0; top: 0; z-index:10" ></canvas>
 <div id="tooltip"></div>
 
 <script src="d3.min.js"></script>
@@ -329,6 +334,8 @@
 	var colorCache = [];
 	var opacityCache = [];
 	var resetBool = true;
+	var renderBool = true;
+	var renderCount = 0;
 
 	// actual calls
 	init();
@@ -339,9 +346,8 @@
 		canvas = document.getElementById( 'canvas' );
 		container = document.getElementById( 'container' );
 		resetBool = true;
-		renderer = new THREE.WebGLRenderer( {canvas } );
+		renderer = new THREE.WebGLRenderer( {canvas} );
 		renderer.setSize(window.innerWidth, window.innerHeight);
-
 		// container.appendChild( renderer.domElement ); // disabled - canvas already prepped
 		selectionWidgetInfo = makeScene(document.querySelector('#parallel')); // initParallelCoords(); // setupScene2();
 
@@ -440,7 +446,7 @@
 			camera.position.z = 800;
 			camera.near = 5;
 			group = new THREE.Group();
-			group.add(buildAxes( 1000 ))
+			group.add(buildAxes( 10000 ))
 			scene.add(group);
 
 			// FIXME: duplicated setup code
@@ -675,10 +681,6 @@
 				super(object, propertyName);
 				// object (includes 'property'), property, min, max, stepsize
 				// crucially, we store extra params in the 'object'
-				if ( this.property === undefined ) {
-					console.error( 'init() returns ' + this.property );
-				}
-				console.log(this.domElement);
 			}
 		}
 
@@ -741,10 +743,16 @@
 	}
 
 	function buildAxes( length ) {
+		/*
+			Going to hardcode the lengths for the h1, h2, h3
+			H1 max: 44
+			H2 max: 46
+			H3 max: 11
+		 */
 		let axes = new THREE.Group();
-		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000],
-		    yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, length, 0 ), 0x00FF00],
-		    zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, length ), 0x0000FF]
+		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 46*length, 0, 0 ), 0xFF0000],
+		    yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 44*length, 0 ), 0x00FF00],
+		    zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, 11*length ), 0x0000FF]
 
 		axes.add(buildAxis(...xPos))
 		axes.add(buildAxis(...yPos))
@@ -887,8 +895,14 @@
 		pointCloud.geometry.attributes.alpha.needsUpdate = true;
 		pointCloud.geometry.attributes.size.needsUpdate = true;
 
-		skein.geometry.attributes.position.needsUpdate = true;
-		skein.geometry.attributes.color.needsUpdate = true;
+		if (renderBool === true) {
+			skein.geometry.attributes.position.needsUpdate = true;
+			skein.geometry.attributes.color.needsUpdate = true;
+		} else {
+			skein.geometry.attributes.position.needsUpdate = false;
+			skein.geometry.attributes.color.needsUpdate = false;
+		}
+
 		// boxHelper.update();
 
 		requestAnimationFrame( animate );
@@ -897,24 +911,36 @@
 
 	function render() {
 		// const time = Date.now() * 0.001;
-		
-		renderer.setScissorTest( false );
-		renderer.clear( true, true );
-		renderer.setScissorTest( true );
-
-		raycastMouse(); // FIXME: use the correct relative position
-
-		const {left, right, top, bottom, width, height} =
-			document.getElementById('container').getBoundingClientRect();
-		const positiveYUpBottom = renderer.domElement.clientHeight - bottom;
-
-		// we'd update the camera projection matrix here if aspect ratio had changed
-    	renderer.setScissor(left, positiveYUpBottom, width, height);
-		renderer.setViewport(left, positiveYUpBottom, width, height);
-		renderer.render( scene, camera );
 
 		// now render the parallel coordinates canvas
-		renderParallelCoords(renderer, selectionWidgetInfo);
+		if (renderBool === true) {
+			renderCount++;
+			renderParallelCoords(renderer, selectionWidgetInfo);
+			if (renderCount === 40) {
+				renderBool = false;
+				const imgData = renderer.domElement.toDataURL("image/png").replace("image/png", "image/octet-stream");
+				console.log(imgData);
+				var elem = document.createElement("img");
+				elem.src = imgData;
+				window.location.href=imgData;
+				document.getElementById("parallel").appendChild(elem);
+			}
+		} else {
+			renderer.setScissorTest( false );
+			renderer.clear( true, true );
+			renderer.setScissorTest( true );
+
+			raycastMouse(); // FIXME: use the correct relative position
+
+			const {left, right, top, bottom, width, height} =
+					document.getElementById('container').getBoundingClientRect();
+			const positiveYUpBottom = renderer.domElement.clientHeight - bottom;
+			// we'd update the camera projection matrix here if aspect ratio had changed
+			renderer.setScissor(left, positiveYUpBottom, width, height);
+			renderer.setViewport(left, positiveYUpBottom, width, height);
+			renderer.render( scene, camera );
+		}
+
 	}
 
 	function raycastMouse() {
@@ -1864,9 +1890,9 @@
 		const schema = GLOBAL_SCHEMA // FIXME: column names should be loaded from a schema file
 
 		strings.setAttribute( 'position', new THREE.BufferAttribute( stringPositions, 3 )
-			.setUsage( THREE.DynamicDrawUsage ) );
+			.setUsage( THREE.StaticDrawUsage));
 		strings.setAttribute( 'color', new THREE.BufferAttribute( stringColor, 3 )
-			.setUsage( THREE.DynamicDrawUsage ) );
+			.setUsage( THREE.StaticDrawUsage));
 		makeStringAttributes(particleData) // TODO: encapsulate particle cloud initialization, too
 
 		console.log("strings in used in line segments", strings);
@@ -2103,7 +2129,6 @@
 				topColorWeight = colorWeight;
 			}
 		}
-		console.log("top color weight:", topColorWeight);
 
 		updatePtsColor();
 	}
@@ -2228,7 +2253,6 @@
 					particleOpacity[i] = (1 - opacityTuning) + opacityTuning * particleConnectionWeight[i] / topEdgeWeight;
 
 					if (resetBool && i === maxParticleCount-1) {
-						console.log("Filling in colorCache");
 						colorCache = particleColor;
 						opacityCache = particleOpacity;
 						resetBool = false;
@@ -2373,10 +2397,9 @@
 					}
 					else {
 						selections.set(key, selection.map(x(key).invert));
-
+						updatePtsColor();
+						console.log("Selections: ", selections)
 						for (let [key, value] of  selections.entries()) {
-							console.log("KEY", key, typeof key);
-							console.log("value", value, typeof value);
 							planktonFilters[key] = value;
 							submitRange(key)
 						}
@@ -2412,8 +2435,6 @@
 	function submitRange(featureName) {
 		//resetColors(); // assign all points to inital color map
 		//updatePtsColor();
-		console.log("colorCache", colorCache);
-		console.log("particleColor", particleColor);
 		if (dataDirectory === "data/plankton/") {
 			// TO DO: finish filtering function + update controller?
 			const values = planktonValues[featureName];
@@ -2433,6 +2454,15 @@
 					particleOpacity[idx[i]] = 0.0;
 				}
 			}
+		}
+	}
+
+	function resetColors() {
+		for (let i = 0; i < maxParticleCount; i++) {
+			particleColor[i * 3] = colorCache[i * 3];
+			particleColor[i * 3 + 1] = colorCache[i * 3 + 1];
+			particleColor[i * 3 + 2] = colorCache[i * 3 + 2];
+			particleOpacity[i] = opacityCache[i];
 		}
 	}
 
