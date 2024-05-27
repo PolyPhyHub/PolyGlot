@@ -1980,7 +1980,7 @@
 
 				keysStrip.forEach((k,j) => {
 					stringPositions[i*n*3 + j*3] =  x.get(k)(u[k])
-					stringPositions[i*n*3 + j*3 + 1] = y(k)
+					stringPositions[i*n*3 + j*3 + 1] = -y(k)
 					stringPositions[i*n*3 + j*3 + 2] = 0.5
 
 					stringColor[i*n*3 + j*3] = vs[0] / 255.
