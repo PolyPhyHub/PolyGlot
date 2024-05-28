@@ -40,9 +40,7 @@
 
 		img {
 			float: right;
-			z-index: 0;
-			max-width: 200%;
-			clip-path: polygon(50% 1%, 100% 1%, 100% 99%, 50% 99%);
+			width: 200% !important;
 		}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/fuzzysort@2.0.4/fuzzysort.min.js"></script>
@@ -106,7 +104,7 @@
 	<div id="container" style="width: 700px; height: 700px;"></div>
 	<div id="gui_container" style="z-index: 200;"></div>
 	<div style="z-index: 90; overflow: clip">
-		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: clip">
+		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: hidden; max-width: 50vw">
 		</div>
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
