@@ -921,7 +921,6 @@
 				const imgData = renderer.domElement.toDataURL("image/png").replace("image/png", "image/parallel_plot");
 				const elem = document.createElement("img");
 				elem.src = imgData;
-				window.location.href=imgData;
 				document.getElementById("parallel").appendChild(elem);
 			}
 		} else {
