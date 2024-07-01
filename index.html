@@ -86,7 +86,7 @@
 
 		void main () {
 		  gColor = color;
-		  gl_Position = vec4(position * .9, 1.);
+		  gl_Position = vec4(position, 1.);
 		}
 		</script>
 	<script type="x-shader/x-fragment" id="fragmentshader-parcoords">
@@ -110,7 +110,7 @@ window.screen.width;
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
 		 width="50%" height="100%"
-		 style="position:fixed; float: right; z-index: 100;">
+		 style="position:fixed; float: right; left: 50%;z-index: 100;">
 	</svg>
 </div>
 <canvas id="canvas" style="position: fixed; left: 0; top: 0;" ></canvas>
