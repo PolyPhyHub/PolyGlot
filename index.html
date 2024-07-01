@@ -99,12 +99,13 @@
 	</script>
 </head>
 <body>
-
+window.screen.height;
+window.screen.width;
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
-	<div id="container" style="width: 700px; height: 700px;"></div>
+	<div id="container" style="width: 95%;"></div>
 	<div id="gui_container" style="z-index: 200;"></div>
-	<div style="z-index: 90; overflow: clip">
-		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: hidden; max-width: 50vw">
+	<div id="parallel_parent"style="z-index: 90; overflow: clip">
+		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: hidden;">
 		</div>
 	</div>
 	<svg id="axes" xmlns="http://www.w3.org/2000/svg"
@@ -921,7 +922,7 @@
 				const imgData = renderer.domElement.toDataURL("image/png").replace("image/png", "image/parallel_plot");
 				const elem = document.createElement("img");
 				elem.src = imgData;
-				document.getElementById("parallel").appendChild(elem);
+				document.getElementById("parallel_parent").appendChild(elem);
 			}
 		} else {
 			renderer.setScissorTest( false );
