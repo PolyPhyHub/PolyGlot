@@ -104,7 +104,7 @@ window.screen.width;
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
 	<div id="container" style="width: 95%;"></div>
 	<div id="gui_container" style="z-index: 200;"></div>
-	<div id="parallel_parent"style="z-index: 90; overflow: clip">
+	<div id="parallel_parent"style="z-index: 90; overflow: hidden">
 		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: hidden;">
 		</div>
 	</div>
@@ -255,7 +255,7 @@ window.screen.width;
 	let shiftDim = true;
 	let displayMultiToken = false;
 	let alwaysAnchor = false;
-	let colorMode = "slime connect";
+	let colorMode = "cosine similarity";
 	let filterPOS = "None";
 
 	// Allow linear intepolation between two colors based on distance
@@ -406,7 +406,7 @@ window.screen.width;
 
 		GUIparam = {
 			'selectData': dataDirectory,
-			'colorMode': "slime connect",
+			'colorMode': "cosine similarity",
 			'filterPOS': "None",
 			'colorRatioPow': 0.5,
 			'nodeWeightThreshold': 0,
@@ -423,7 +423,8 @@ window.screen.width;
 			'showAnnotations': true,
 			'grayScale': false,
 			'year': 2020.7,
-			'timeSize': 1
+			'timeSize': 1,
+			'pointSize': 1
 		};
 
 		newAnnotationParam = {
@@ -457,13 +458,13 @@ window.screen.width;
 			} */
 			
 			visualFolder.remove(colorMapDropDown);
-			colorModeList = ["slime connect", "part of speech"];
+			colorModeList = ["cosine similarity", "part of speech"];
 			if (colorMapBool && (dataDirectory === "data/plankton/")) {
 				colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 					colorMode = GUIparam.colorMode;
 					resetBool = true;
-					if (colorMode !== ("slime connect" || "part of speech")) {
+					if (colorMode !== ("cosine similarity" || "part of speech")) {
 						getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 							let reader = new FileReader();
 
@@ -501,7 +502,7 @@ window.screen.width;
 
 		})
 
-		var colorModeList = ["slime connect", "part of speech"];
+		var colorModeList = ["cosine similarity"];
 
 		if (highDimMetricBool) {
 			colorModeList.push("high dimension");
@@ -525,20 +526,26 @@ window.screen.width;
 			updatePtsColor();
 		});
 
+		gui.add(GUIparam, 'pointSize', 0.001, 2).name('Point Size').onChange(function(size){
+			for (let k = 0; k < maxParticleCount; k++)
+				particleSize[k] = size;
+			updatePtsColor();
+		});
+
 		// gui.add(GUIparam, 'nodeWeightThreshold', 0, 1).name('Lowest Weight').onChange(function(){
 		// 	nodeWeightThreshold = GUIparam.nodeWeightThreshold;
 		// 	updatePtsColor();
 		// })
 
-		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter LD').onChange(function(){
+		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter Cosine').onChange(function(){
 			connWeightThreshold = GUIparam.particleConnectionWeight;
 			updatePtsColor();
 		});
 
-		gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
-			connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
-			updatePtsColor();
-		});
+		// gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
+		// 	connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
+		// 	updatePtsColor();
+		// });
 
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
@@ -549,9 +556,9 @@ window.screen.width;
 			shiftDim = GUIparam.shiftDim;
 		});
 
-		gui.add(GUIparam, 'displayMultiToken').name('Fuzzy Cursor').onChange(function(){
-			displayMultiToken = GUIparam.displayMultiToken;
-		});
+		// gui.add(GUIparam, 'displayMultiToken').name('Fuzzy Cursor').onChange(function(){
+		// 	displayMultiToken = GUIparam.displayMultiToken;
+		// });
 
 		// gui.add(GUIparam, 'alwaysAnchor').name('Keep Anchor Displayed').onChange(function(){
 		// 	alwaysAnchor = GUIparam.alwaysAnchor;
@@ -688,15 +695,15 @@ window.screen.width;
 		const latController = new TextRangeController(latitudeObj, 'center');
 		const lonController = new TextRangeController(longitudeObj, 'center');
 
-		gui.add(latController);
-		gui.add(lonController);
+		// gui.add(latController);
+		// gui.add(lonController);
 
 		if (colorMapBool && dataDirectory === "data/plankton/") {
 			colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 			colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
 				colorMode = GUIparam.colorMode;
 				resetBool = true;
-				if (colorMode !== ("slime connect" || "part of speech")) {
+				if (colorMode !== ("cosine similarity" || "part of speech")) {
 					getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
 						let reader = new FileReader();
 
@@ -2209,7 +2216,7 @@ window.screen.width;
 							// Cache all possible hsl values, save in a lookup table, and use those
 							// compute the RBG values once and simply look it up as needed
 							// discretize the ratios (small enough for no one to see difference)
-						case "slime connect":
+						case "cosine similarity":
 							var ratio = Math.pow(particleConnectionWeight[i] / topEdgeWeight, colorRatioPow);
 							if (grayScaleBool === false) {
 								finalColor = chroma.mix(farthestRGB, closestRGB, ratio, 'hsl').rgb();
