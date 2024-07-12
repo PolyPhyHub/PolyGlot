@@ -42,6 +42,13 @@
 			float: right;
 			width: 200% !important;
 		}
+
+		text {
+			font-family: 'Avenir', sans-serif;
+			font-size: larger;
+			font-weight: bold;
+			fill: red;
+		}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/fuzzysort@2.0.4/fuzzysort.min.js"></script>
 	<script src="./chroma.js-master/chroma.js"></script>
@@ -103,7 +110,7 @@ window.screen.height;
 window.screen.width;
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
 	<div id="container" style="width: 95%;"></div>
-	<div id="gui_container" style="z-index: 200;"></div>
+	<div id="gui_container" style="z-index: 200; bottom: 20px"></div>
 	<div id="parallel_parent"style="z-index: 90; overflow: hidden">
 		<div id="parallel" style="width: 50%; height: 100%; float: right; position: absolute; overflow: hidden;">
 		</div>
@@ -235,7 +242,7 @@ window.screen.width;
 	let stringPositions;
 	let stringColor;
 	let boxHelper;
-	
+
 	let topEdgeWeight = -1;
 	let topNodeWeight = -1;
 	let topColorWeight = -1;
@@ -366,7 +373,7 @@ window.screen.width;
 
 		// interaction
 		raycaster = new THREE.Raycaster();
-		raycaster.params.Points.threshold = 12;
+		raycaster.params.Points.threshold = 2.5;
 		raycasterMultiTokens = new THREE.Raycaster();
 		raycasterMultiTokens.params.Points.threshold = 1.75;
 		raycasterAnnotations = new THREE.Raycaster();
@@ -378,7 +385,7 @@ window.screen.width;
 		scene = new THREE.Scene();
 		camera = new THREE.PerspectiveCamera(90,
 				window.innerWidth/window.innerHeight, 5, 8000);
-		
+
 		camera.position.set(400, 200, 800); // camera.position.z = 800;
 		camera.near = camera.far; // CHANGED NEAR PARAM TO MAKE RAY CASTING SMOOTHER DURING ZOOM
 		camera.lookAt(400, 200, 0);
@@ -456,7 +463,7 @@ window.screen.width;
 				const axesHelper = new THREE.AxesHelper( 500 );
 				scene.add( axesHelper );
 			} */
-			
+
 			visualFolder.remove(colorMapDropDown);
 			colorModeList = ["cosine similarity", "part of speech"];
 			if (colorMapBool && (dataDirectory === "data/plankton/")) {
@@ -736,7 +743,7 @@ window.screen.width;
 		document.addEventListener('keyup', onKeyUpEvent);
 	}
 
-	
+
 	// TODO: this helper function is probably not in the right place
 	function buildAxis(st, nd, col) {
 		const geometry = new THREE.BufferGeometry();
@@ -759,8 +766,8 @@ window.screen.width;
 		 */
 		let axes = new THREE.Group();
 		let xPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 46*length, 0, 0 ), 0xFF0000],
-		    yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 44*length, 0 ), 0x00FF00],
-		    zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, 11*length ), 0x0000FF]
+				yPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 44*length, 0 ), 0x00FF00],
+				zPos = [new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, 11*length ), 0x0000FF]
 
 		axes.add(buildAxis(...xPos))
 		axes.add(buildAxis(...yPos))
@@ -784,7 +791,7 @@ window.screen.width;
 		event.preventDefault();
 		let u = document.getElementById('container') // get dimensions from scatter plot viewport
 		let w = u.clientWidth, // window.innerWidth
-			h = u.clientHeight // window.innerHeight
+				h = u.clientHeight // window.innerHeight
 
 		mouse.x = (event.clientX / w) * 2 - 1;
 		mouse.y = -(event.clientY / h) * 2 + 1;
@@ -1026,16 +1033,16 @@ window.screen.width;
 				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
 
 				let w = intersects[i], // {distance: Float, distanceToRay: Float, face: {}, index: Int, object: ThreeJS, point: {x,y,z} }
-					u = particleData[w.index] // {id: Int, name: String, ...}
+						u = particleData[w.index] // {id: Int, name: String, ...}
 				// particle_mesg = intersects[i].index.toString() + ": " + particleData[i].name;
 
 				particle_mesg = GLOBAL_SCHEMA
-								.map((k) => ['id'].includes(k) ? '' : `${k}: ${u[k]}`).filter(s => s).join('\n')
+						.map((k) => ['id'].includes(k) ? '' : `${k}: ${u[k]}`).filter(s => s).join('\n')
 
 				expand = false;
 				showTooltip(new THREE.Vector3(particlePositions[i*3],
-						particlePositions[i*3 + 1],
-						particlePositions[i*3 + 2]),
+								particlePositions[i*3 + 1],
+								particlePositions[i*3 + 2]),
 						particle_mesg);
 
 
@@ -1138,8 +1145,8 @@ window.screen.width;
 			opacity: 0.0
 		});
 
-		var canvasHalfWidth = renderer.domElement.offsetWidth / 2;
-		var canvasHalfHeight = renderer.domElement.offsetHeight / 2;
+		var canvasHalfWidth = renderer.domElement.offsetWidth / 4;
+		var canvasHalfHeight = renderer.domElement.offsetHeight / 4;
 
 		var tooltipPosition = objectPosition.clone().project(camera);
 		tooltipPosition.x = (tooltipPosition.x * canvasHalfWidth) + canvasHalfWidth;
@@ -1151,6 +1158,11 @@ window.screen.width;
 		divElement.css({
 			left: `${tooltipPosition.x + tooltipWidth / 16 - tooltipWidth/2}px`,
 			top: `${tooltipPosition.y + tooltipHeight / 16 + 30}px`
+		});
+
+		divElement.css({
+			left: `${window.screen.width/3 - 150}px`,
+			top: `${window.screen.height/2 + 50}px`
 		});
 
 		divElement.text(text);
@@ -1891,14 +1903,14 @@ window.screen.width;
 		allPoints = particleData.map(x => x.id + ": " + x.name);
 
 		const sizeAttribute = pointCloud.geometry.getAttribute("size");
-		
+
 		// create the parallel coordinates plot
 		const schema = GLOBAL_SCHEMA // FIXME: column names should be loaded from a schema file
 
 		strings.setAttribute( 'position', new THREE.BufferAttribute( stringPositions, 3 )
-			.setUsage( THREE.StaticDrawUsage));
+				.setUsage( THREE.StaticDrawUsage));
 		strings.setAttribute( 'color', new THREE.BufferAttribute( stringColor, 3 )
-			.setUsage( THREE.StaticDrawUsage));
+				.setUsage( THREE.StaticDrawUsage));
 		makeStringAttributes(particleData) // TODO: encapsulate particle cloud initialization, too
 
 		//console.log("strings in used in line segments", strings);
@@ -1939,70 +1951,70 @@ window.screen.width;
 			console.log("loadFullData() could not write to uninitialized particleData. retrying")
 		}
 	}
-	
+
 	// TODO: put this in a module
-	function makeStringAttributes (data, colorKey = 't') {  
+	function makeStringAttributes (data, colorKey = 't') {
 		// this function should be re-run every time the particleData or colorKey is updated
 		const ret = {}
 		const keys = GLOBAL_SCHEMA // CLUDGE - the schema should itself be data-driven 
 
 		// create appropriate scales for the parallel coordinate chart
 		const x = new Map(
-			Array.from(keys, (key) => [
-				key,
-				d3.scaleLinear(
-				d3.extent(data, (d) => d[key]),
-				[-1, 1] //[marginLeft, width - marginRight]
-				)
-			])
-			);
+				Array.from(keys, (key) => [
+					key,
+					d3.scaleLinear(
+							d3.extent(data, (d) => d[key]),
+							[-1, 1] //[marginLeft, width - marginRight]
+					)
+				])
+		);
 		const y = d3.scalePoint(keys, [-1,1]); // [marginTop, height - marginBottom]);
 		const color = d3.scaleSequential(x.get(colorKey).domain(), (t) => d3.interpolateRdBu(1 - t) );
-	
+
 		// duplicate keys like [A, B, B, C] for the GL_LINES primitive
 		const keysStrip = [
 			keys[0],
 			...keys
-				.slice(1, -1)
-				.map((u) => [u, u])
-				.flat(),
+					.slice(1, -1)
+					.map((u) => [u, u])
+					.flat(),
 			keys.slice(-1)[0]
 		];
 
 		//console.log("keystrip", keysStrip);
-	
+
 		// populate the buffers directly
 		const n = keysStrip.length
 		let cleanFlag = true
 
 		data
-			.forEach((u,i) => {
-				// we need a fallback color because the colorkey column may not be loaded yet (nondeterministic order)
-				const vs = (color(u[colorKey]) || "rgb(255,255,255)").slice(4,-1).split(', ').map(v => +v)
+				.forEach((u,i) => {
+					// we need a fallback color because the colorkey column may not be loaded yet (nondeterministic order)
+					const vs = (color(u[colorKey]) || "rgb(255,255,255)").slice(4,-1).split(', ').map(v => +v)
 
-				// if (i == 78015) console.log(keys.map(k => x.get(k)(u[k])))
-				// if (i == 78015) console.log(keysStrip.map((k,j) => i*n + j*3 + 2))
+					// if (i == 78015) console.log(keys.map(k => x.get(k)(u[k])))
+					// if (i == 78015) console.log(keysStrip.map((k,j) => i*n + j*3 + 2))
 
-				keysStrip.forEach((k,j) => {
-					stringPositions[i*n*3 + j*3] =  x.get(k)(u[k])
-					stringPositions[i*n*3 + j*3 + 1] = -y(k)
-					stringPositions[i*n*3 + j*3 + 2] = 0.5
+					keysStrip.forEach((k,j) => {
+						stringPositions[i*n*3 + j*3] =  x.get(k)(u[k])
+						stringPositions[i*n*3 + j*3 + 1] = -y(k)
+						stringPositions[i*n*3 + j*3 + 2] = 0.5
 
-					stringColor[i*n*3 + j*3] = vs[0] / 255.
-					stringColor[i*n*3 + j*3 + 1] = vs[1] / 255.
-					stringColor[i*n*3 + j*3 + 2] = vs[2] / 255.
+						stringColor[i*n*3 + j*3] = vs[0] / 255.
+						stringColor[i*n*3 + j*3 + 1] = vs[1] / 255.
+						stringColor[i*n*3 + j*3 + 2] = vs[2] / 255.
 
-					if (cleanFlag && u[k] === undefined)
-					  cleanFlag = false // it's okay for positions to have NaN values before all keys are loaded
+						if (cleanFlag && u[k] === undefined)
+							cleanFlag = false // it's okay for positions to have NaN values before all keys are loaded
+					})
 				})
-			})
 		if (cleanFlag) {
 			//console.log(data.length)
 			//console.log(stringPositions.findIndex((pos,i) => i%3 == 2 && pos === 0))
 
 			strings.computeBoundingBox() // throws an error if some vertices are undefined
 			//console.log(strings)
-			
+
 			// strings.center()
 
 			addAxes(document.getElementById("axes"), keysStrip, data);
@@ -2057,7 +2069,7 @@ window.screen.width;
 			depthWrite:     true,
 			opacity:		0.01,
 			transparent:    true
-		} ) 
+		} )
 
 		const n = (GLOBAL_SCHEMA.length * 2) - 2; // number of vertices to define (note: index to reduce duplicates)
 		strings = new THREE.BufferGeometry();
@@ -2379,29 +2391,32 @@ window.screen.width;
 				})
 				.call((g) =>
 						g.append("text") // axis labels
-						.style("font-size", "15")
-						.attr("x", 20)
-						.attr("y", -5)
-						.attr("text-anchor", "start")
-						.attr("fill", "currentColor")
-						.text((d) => d)
+								.style("font-size", "15")
+								.attr("x", 20)
+								.attr("y", -5)
+								.attr("text-anchor", "start")
+								.attr("fill", "currentColor")
+								.text((d) => d)
 
 				)
 				.call((g) =>
 						g.selectAll("text")
-						.clone(true) // underlay for labels
-						.lower()
-						.attr("fill", "none")
-						.attr("stroke-width", 5)
-						.attr("stroke-linejoin", "round")
-						.attr("stroke", "white")
+								.clone(true) // underlay for labels
+								.lower()
+								.attr("fill", "none")
+								.attr("stroke-width", 3)
+								.attr("stroke-linejoin", "round")
+								.attr("stroke", "white")
 				);
 
 		axes.call(
 				brush.on("end", function ({ selection }, key) {
 					// update the Map describing our set of filters
 					if (selection === null) {
-						selections.delete(key);
+						for (let k = 0; k < GLOBAL_SCHEMA.length; k++) {
+							selections.delete(GLOBAL_SCHEMA[k]);
+							planktonFilters[GLOBAL_SCHEMA[k]] = [];
+						}
 						updatePtsColor();
 					}
 					else {
@@ -2413,6 +2428,8 @@ window.screen.width;
 							submitRange(key)
 						}
 					}
+					console.log("selections", selections);
+					console.log("plankton filters", planktonFilters);
 					// mutable debug = selections;
 
 					// write out the selected rows (straight to their own buffer)
